@@ -31,6 +31,7 @@ def set_keras_backend(framework: Framework) -> None:
 
 def reload_keras_backend(framework: Framework) -> None:
     """Reload the Keras backend with a given framework."""
+    # ruff: noqa: PLC0415
     # pylint: disable=import-outside-toplevel
     import keras
 

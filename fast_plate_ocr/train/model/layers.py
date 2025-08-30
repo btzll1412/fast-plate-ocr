@@ -9,7 +9,7 @@ import numpy as np
 from keras import ops
 
 # pylint: disable=too-many-ancestors,abstract-method,attribute-defined-outside-init,arguments-differ
-# pylint: disable=useless-parent-delegation
+# pylint: disable=useless-parent-delegation,too-many-instance-attributes,too-many-arguments
 
 
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
