@@ -63,7 +63,7 @@ lint: ruff yamllint pylint mypy
 .PHONY: test
 test:
 	@echo "=====> Running tests..."
-	@uv run pytest test/
+	@uv run pytest -n auto
 
 .PHONY: clean
 clean:

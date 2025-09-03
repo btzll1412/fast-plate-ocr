@@ -23,6 +23,12 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 dependencies = [
     "numpy>=1.20",
@@ -30,6 +36,7 @@ dependencies = [
     "pyyaml>=5.1",
     "tqdm",
     "rich",
+    "torch>=2.8.0",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +68,10 @@ Documentation = "https://ankandrew.github.io/fast-plate-ocr"
 fast-plate-ocr = "fast_plate_ocr.cli.cli:main_cli"
 
 [dependency-groups]
-test = ["pytest"]
+test = [
+    "pytest",
+    "pytest-xdist[psutil]>=3.8.0",
+]
 dev = [
     "mypy",
     "ruff",
@@ -157,3 +167,19 @@ min-public-methods = 1
 
 [tool.pylint.basic]
 no-docstring-rgx = "^__|^test_"
+
+[tool.pytest.ini_options]
+testpaths = [
+  "test",
+]
+
+norecursedirs = [
+  ".git",
+  ".venv",
+  ".tox",
+  "docs",
+  "examples",
+  "trained_models",
+]
+
+python_files = ["test_*.py"]
