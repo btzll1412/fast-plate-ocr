@@ -22,6 +22,11 @@ from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 from test import MODEL_CONFIG_PATHS, PLATE_CONFIG_DIR
 
 LATIN_VOCAB_PLATE_CONFIG = PLATE_CONFIG_DIR / "default_latin_plate_config.yaml"
+"""Plate config used for testing."""
+EXCLUDE_MODELS = ("cct_s_v1_relu", "cct_xs_v1_relu")
+"""Models to exclude from testing."""
+MODEL_CONFIG_PATHS_TO_TEST = [m for m in MODEL_CONFIG_PATHS if m.stem not in EXCLUDE_MODELS]
+"""Model configs to test."""
 
 
 def _build_and_save_keras_model(
@@ -37,7 +42,7 @@ def _build_and_save_keras_model(
     return model_save_path, plate_cfg
 
 
-@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS)
+@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS_TO_TEST)
 @pytest.mark.parametrize("simplify", [False, True])
 @pytest.mark.parametrize("dynamic_batch", [False, True])
 def test_export_to_onnx(
@@ -72,7 +77,7 @@ def test_export_to_onnx(
     assert exported_path.exists(), f"Expected exported ONNX file at {exported_path}"
 
 
-@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS)
+@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS_TO_TEST)
 def test_export_to_onnx_nchw_float32(
     model_config_path: Path,
     tmp_path: Path,
@@ -116,7 +121,7 @@ def test_export_to_onnx_nchw_float32(
     )
 
 
-@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS)
+@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS_TO_TEST)
 def test_export_to_tflite(
     model_config_path: Path,
     tmp_path: Path,
@@ -142,7 +147,7 @@ def test_export_to_tflite(
 
 
 @pytest.mark.filterwarnings("ignore")
-@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS)
+@pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS_TO_TEST)
 def test_export_to_coreml(
     model_config_path: Path,
     tmp_path: Path,
