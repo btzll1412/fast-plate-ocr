@@ -32,11 +32,10 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.20",
-    "opencv-python",
+    "opencv-python-headless",
     "pyyaml>=5.1",
-    "tqdm",
     "rich",
-    "torch>=2.8.0",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
