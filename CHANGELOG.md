@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ReLU xs/s model versions
 - Use CSVLogger logger callback by default
+- Replace `opencv-python` with `opencv-python-headless`
 
 ## [1.0.0] - 2025-06-07
 
