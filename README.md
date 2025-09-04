@@ -33,7 +33,7 @@ The idea is to use this after a plate object detector, since the OCR expects the
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
-- **Export-Friendly**: Export easily to **CoreML** or **TFLite** formats 📦
+- **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
 
 ## Available Models
 
