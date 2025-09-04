@@ -206,8 +206,8 @@ def display_predictions(
         cv2.imshow("plates", image_to_show)
         if cv2.waitKey(0) & 0xFF == ord("q"):
             return
-    except cv2.error as e:
-        raise RuntimeError(
+    except cv2.error as e:  # pylint: disable=catching-non-exception
+        raise RuntimeError(  # pylint: disable=bad-exception-cause
             "This visualization requires full OpenCV with GUI support. "
             "Install with `pip install opencv-python` instead of headless."
         ) from e
