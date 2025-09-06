@@ -61,6 +61,7 @@ def _build_cct_model(
             mlp_dropout=cfg.transformer_encoder.mlp_dropout,
             drop_path_rate=rate,
             norm_type=cfg.transformer_encoder.normalization,
+            activation=cfg.transformer_encoder.activation,
             name=f"transformer_block_{i}",
         )(x)
 

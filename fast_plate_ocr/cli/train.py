@@ -12,6 +12,7 @@ import albumentations as A
 import click
 import keras
 from keras.src.callbacks import (
+    CSVLogger,
     EarlyStopping,
     ModelCheckpoint,
     SwapEMAWeights,
@@ -423,6 +424,7 @@ def train(
             verbose=1,
         ),
         TerminateOnNaN(),
+        CSVLogger(str(output_dir / "training_log.csv")),
     ]
 
     if tensorboard:

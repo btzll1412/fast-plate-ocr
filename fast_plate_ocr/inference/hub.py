@@ -17,6 +17,8 @@ BASE_URL: str = "https://github.com/ankandrew/cnn-ocr-lp/releases/download"
 OcrModel = Literal[
     "cct-s-v1-global-model",
     "cct-xs-v1-global-model",
+    "cct-s-relu-v1-global-model",
+    "cct-xs-relu-v1-global-model",
     "argentinian-plates-cnn-model",
     "argentinian-plates-cnn-synth-model",
     "european-plates-mobile-vit-v2-model",
@@ -49,6 +51,14 @@ AVAILABLE_ONNX_MODELS: dict[OcrModel, tuple[str, str]] = {
     "global-plates-mobile-vit-v2-model": (
         f"{BASE_URL}/arg-plates/global_mobile_vit_v2_ocr.onnx",
         f"{BASE_URL}/arg-plates/global_mobile_vit_v2_ocr_config.yaml",
+    ),
+    "cct-s-relu-v1-global-model": (
+        f"{BASE_URL}/arg-plates/cct_s_relu_v1_global.onnx",
+        f"{BASE_URL}/arg-plates/cct_s_relu_v1_global_plate_config.yaml",
+    ),
+    "cct-xs-relu-v1-global-model": (
+        f"{BASE_URL}/arg-plates/cct_xs_relu_v1_global.onnx",
+        f"{BASE_URL}/arg-plates/cct_xs_relu_v1_global_plate_config.yaml",
     ),
 }
 """Dictionary of available OCR models and their URLs."""

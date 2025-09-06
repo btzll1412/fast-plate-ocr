@@ -33,7 +33,7 @@ The idea is to use this after a plate object detector, since the OCR expects the
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
-- **Export-Friendly**: Export easily to **CoreML** or **TFLite** formats 📦
+- **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
 
 ## Available Models
 
@@ -55,6 +55,8 @@ Optimized, ready to use models with config files for inference or fine-tuning.
 > - **Hardware**: NVIDIA RTX 3090 GPU
 > - **Execution Providers**: `['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']`
 > - **Install dependencies**: `pip install fast-plate-ocr[onnx-gpu]`
+
+Explore the [Model Zoo](https://ankandrew.github.io/fast-plate-ocr/latest/inference/model_zoo/) to see all available models.
 
 ## Inference
 

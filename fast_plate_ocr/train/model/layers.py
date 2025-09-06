@@ -9,7 +9,7 @@ import numpy as np
 from keras import ops
 
 # pylint: disable=too-many-ancestors,abstract-method,attribute-defined-outside-init,arguments-differ
-# pylint: disable=useless-parent-delegation
+# pylint: disable=useless-parent-delegation,too-many-instance-attributes,too-many-arguments
 
 
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
@@ -469,17 +469,20 @@ class TransformerBlock(keras.layers.Layer):
         mlp_dropout: float,
         drop_path_rate: float,
         norm_type: str | None = "layer_norm",
+        activation: str = "gelu",
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.norm_type = norm_type
+        self.activation = activation
+
         self.norm1 = build_norm_layer(norm_type)
         self.attn = keras.layers.MultiHeadAttention(
             num_heads=num_heads, key_dim=projection_dim, dropout=attention_dropout
         )
         self.drop1 = StochasticDepth(drop_path_rate)
         self.norm2 = build_norm_layer(norm_type)
-        self.mlp = MLP(hidden_units=mlp_units, dropout_rate=mlp_dropout)
+        self.mlp = MLP(hidden_units=mlp_units, dropout_rate=mlp_dropout, activation=activation)
         self.drop2 = StochasticDepth(drop_path_rate)
 
     def build(self, input_shape) -> None:
@@ -509,6 +512,7 @@ class TransformerBlock(keras.layers.Layer):
                 "attention_dropout": self.attn.dropout,
                 "drop_path_rate": self.drop1.drop_prob,
                 "norm_type": self.norm_type,
+                "activation": self.activation,
             }
         )
         return cfg

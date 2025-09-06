@@ -26,6 +26,7 @@ logging.basicConfig(
 )
 
 
+# ruff: noqa: PLC0415
 # pylint: disable=too-many-arguments,too-many-locals,import-outside-toplevel
 
 
