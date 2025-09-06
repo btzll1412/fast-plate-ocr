@@ -56,6 +56,8 @@ Optimized, ready to use models with config files for inference or fine-tuning.
 > - **Execution Providers**: `['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']`
 > - **Install dependencies**: `pip install fast-plate-ocr[onnx-gpu]`
 
+Explore the [Model Zoo](https://ankandrew.github.io/fast-plate-ocr/latest/inference/model_zoo/) to see all available models.
+
 ## Inference
 
 For doing inference, install:
