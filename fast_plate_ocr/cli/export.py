@@ -118,7 +118,7 @@ def _prepare_model_for_onnx_export(
 
 
 @requires("onnx", "onnxruntime", "onnxslim")
-def export_onnx(
+def export_onnx(  # noqa: PLR0913
     model: keras.Model,
     plate_config: PlateOCRConfig,
     out_file: pathlib.Path,
@@ -127,6 +127,7 @@ def export_onnx(
     skip_validation: bool = False,
     onnx_input_dtype: str = "uint8",
     onnx_data_format: TensorDataFormat = "channels_last",
+    opset_version: int | None = None,
 ) -> None:
     import onnxruntime as rt
 
@@ -136,7 +137,13 @@ def export_onnx(
     spec = [keras.InputSpec(name="input", shape=spec_shape, dtype=onnx_input_dtype)]
 
     with NamedTemporaryFile(suffix=".onnx") as tmp:
-        export_model.export(tmp.name, format="onnx", verbose=False, input_signature=spec)
+        export_model.export(
+            tmp.name,
+            format="onnx",
+            verbose=False,
+            input_signature=spec,
+            opset_version=opset_version,
+        )
 
         if simplify:
             import onnx
@@ -307,6 +314,13 @@ def export_coreml(
     help="Simplify ONNX model using onnxslim (only applies when format is ONNX).",
 )
 @click.option(
+    "--onnx-opset-version",
+    required=False,
+    default=None,
+    type=int,
+    help="ONNX opset version to use (only applies when format is ONNX).",
+)
+@click.option(
     "--plate-config-file",
     required=True,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
@@ -351,6 +365,7 @@ def export(  # noqa: PLR0913
     model_path: pathlib.Path,
     export_format: str,
     simplify: bool,
+    onnx_opset_version: int | None,
     plate_config_file: pathlib.Path,
     save_dir: pathlib.Path,
     dynamic_batch: bool,
@@ -376,6 +391,7 @@ def export(  # noqa: PLR0913
             skip_validation=skip_validation,
             onnx_input_dtype=onnx_input_dtype,
             onnx_data_format=onnx_data_format,
+            opset_version=onnx_opset_version,
         )
     elif export_format == "tflite":
         out_file = _make_output_path(model_path, save_dir, ".tflite")
