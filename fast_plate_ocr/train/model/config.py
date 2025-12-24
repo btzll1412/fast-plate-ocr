@@ -24,7 +24,7 @@ An integer in the range [0, 255], used for color channel values.
 """
 
 
-class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
+class PlateConfig(BaseModel, extra="forbid", frozen=True):
     """
     Model License Plate config.
     """
@@ -92,7 +92,7 @@ class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
         return bool(self.plate_regions)
 
     @model_validator(mode="after")
-    def check_alphabet_and_pad(self) -> "PlateOCRConfig":
+    def check_alphabet_and_pad(self) -> "PlateConfig":
         # `pad_char` must be in alphabet
         if self.pad_char not in self.alphabet:
             raise ValueError("Pad character must be present in model alphabet.")
@@ -102,14 +102,14 @@ class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
         return self
 
     @model_validator(mode="after")
-    def check_plate_regions(self) -> "PlateOCRConfig":
+    def check_plate_regions(self) -> "PlateConfig":
         # Ensure there are no duplicate characters in plate_regions
         if self.plate_regions and len(set(self.plate_regions)) != len(self.plate_regions):
             raise ValueError("Plate regions must not contain duplicate characters.")
         return self
 
 
-def load_plate_config_from_yaml(yaml_path: PathLike) -> PlateOCRConfig:
+def load_plate_config_from_yaml(yaml_path: PathLike) -> PlateConfig:
     """
     Reads and parses a YAML file containing the plate configuration.
 
@@ -117,7 +117,7 @@ def load_plate_config_from_yaml(yaml_path: PathLike) -> PlateOCRConfig:
         yaml_path: Path to the YAML file containing the plate config.
 
     Returns:
-        PlateOCRConfig: Parsed and validated plate configuration.
+        PlateConfig: Parsed and validated plate configuration.
 
     Raises:
         FileNotFoundError: If the YAML file does not exist.
@@ -126,5 +126,5 @@ def load_plate_config_from_yaml(yaml_path: PathLike) -> PlateOCRConfig:
         raise FileNotFoundError(f"Plate config '{yaml_path}' doesn't exist.")
     with open(yaml_path, encoding="utf-8") as f_in:
         yaml_content = yaml.safe_load(f_in)
-    config = PlateOCRConfig(**yaml_content)
+    config = PlateConfig(**yaml_content)
     return config

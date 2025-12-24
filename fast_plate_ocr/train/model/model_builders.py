@@ -8,7 +8,7 @@ import keras
 import numpy as np
 from keras import layers
 
-from fast_plate_ocr.train.model.config import PlateOCRConfig
+from fast_plate_ocr.train.model.config import PlateConfig
 from fast_plate_ocr.train.model.layers import (
     PatchExtractor,
     PositionEmbedding,
@@ -27,7 +27,7 @@ def _build_stem_from_config(specs: Sequence[LayerConfig]) -> keras.Sequential:
 def _build_cct_model(
     cfg: CCTModelConfig,
     input_shape: tuple[int, int, int],
-    plate_cfg: PlateOCRConfig,
+    plate_cfg: PlateConfig,
     enable_region_head: bool,
 ) -> keras.Model:
     # 1. Input
@@ -50,9 +50,7 @@ def _build_cct_model(
         x = x + PositionEmbedding(sequence_length=seq_len, name="pos_emb")(x)
 
     # 7. N x TransformerBlock's
-    dpr = list(
-        np.linspace(0.0, cfg.transformer_encoder.stochastic_depth, cfg.transformer_encoder.layers)
-    )
+    dpr = list(np.linspace(0.0, cfg.transformer_encoder.stochastic_depth, cfg.transformer_encoder.layers))
     for i, rate in enumerate(dpr, 1):
         x = TransformerBlock(
             projection_dim=cfg.transformer_encoder.projection_dim,
@@ -81,9 +79,7 @@ def _build_cct_model(
 
     if enable_region_head:
         pooled_tokens = SequencePooling(name="region_seq_pool")(x)
-        region_logits = layers.Dense(
-            len(plate_cfg.plate_regions), activation="softmax", name="region"
-        )(pooled_tokens)
+        region_logits = layers.Dense(len(plate_cfg.plate_regions), activation="softmax", name="region")(pooled_tokens)
         outputs = {"plate": plate_logits, "region": region_logits}
     else:
         outputs = {"plate": plate_logits}
@@ -93,7 +89,7 @@ def _build_cct_model(
 
 def build_model(
     model_cfg: AnyModelConfig,
-    plate_cfg: PlateOCRConfig,
+    plate_cfg: PlateConfig,
     enable_region_head: bool = False,
 ) -> keras.Model:
     """

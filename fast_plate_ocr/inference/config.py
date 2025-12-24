@@ -12,12 +12,12 @@ from fast_plate_ocr.core.types import ImageColorMode, ImageInterpolation, PathLi
 
 
 @dataclass(frozen=True)
-class PlateOCRConfig:  # pylint: disable=too-many-instance-attributes
+class PlateConfig:  # pylint: disable=too-many-instance-attributes
     """
-    Plate OCR Config used for inference.
+    Inference configuration for a plate recognition model.
 
-    This dataclass is used to read and parse the config file used for training the OCR model.
-    We prefer to keep the inference package with minimal dependencies and avoid using Pydantic here.
+    This dataclass is used to read and parse the YAML config produced during training.
+    The inference package keeps dependencies minimal and avoids Pydantic.
     """
 
     max_plate_slots: int
@@ -79,9 +79,9 @@ class PlateOCRConfig:  # pylint: disable=too-many-instance-attributes
         return bool(self.plate_regions)
 
     @classmethod
-    def from_yaml(cls, path: PathLike) -> "PlateOCRConfig":
+    def from_yaml(cls, path: PathLike) -> "PlateConfig":
         """
-        Read and parse a yaml containing the Plate OCR config.
+        Read and parse a YAML file containing the inference configuration.
         """
         with open(path, encoding="utf-8") as f_in:
             data = yaml.safe_load(f_in)
