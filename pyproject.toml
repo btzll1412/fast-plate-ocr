@@ -125,6 +125,10 @@ select = [
     "RUF",
     # pandas-vet
     "PD",
+    # flynt
+    "FLY",
+    # flake8-comprehensions
+    "C4",
 ]
 ignore = ["N812", "PLR2004", "PD011"]
 fixable = ["ALL"]
