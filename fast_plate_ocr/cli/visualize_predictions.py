@@ -14,9 +14,7 @@ from fast_plate_ocr.train.model.config import load_plate_config_from_yaml
 from fast_plate_ocr.train.utilities import utils
 from fast_plate_ocr.train.utilities.utils import postprocess_model_output
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
 
 @click.command(context_settings={"max_content_width": 120})
@@ -87,9 +85,7 @@ def visualize_predictions(
             vocab_size=plate_config.vocabulary_size,
         )
         if not filter_conf or (filter_conf and np.any(probs < filter_conf)):
-            utils.display_predictions(
-                image=image, plate=plate, probs=probs, low_conf_thresh=low_conf_thresh
-            )
+            utils.display_predictions(image=image, plate=plate, probs=probs, low_conf_thresh=low_conf_thresh)
     cv2.destroyAllWindows()
 
 

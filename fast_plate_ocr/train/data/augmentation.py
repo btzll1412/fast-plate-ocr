@@ -58,9 +58,7 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                 A.RandomBrightnessContrast(brightness_limit=0.10, contrast_limit=0.10, p=0.5),
                 A.OneOf(
                     [
-                        A.HueSaturationValue(
-                            hue_shift_limit=5, sat_shift_limit=10, val_shift_limit=10, p=0.7
-                        ),
+                        A.HueSaturationValue(hue_shift_limit=5, sat_shift_limit=10, val_shift_limit=10, p=0.7),
                         A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.3),
                     ],
                     p=0.3,

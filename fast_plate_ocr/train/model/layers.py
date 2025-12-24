@@ -114,9 +114,7 @@ class MaxBlurPooling2D(keras.layers.Layer):
         binomial_filter = _build_binomial_filter(filter_size=self.filter_size)
         binomial_filter = np.repeat(binomial_filter, input_shape[3])
         # Maybe this should be channel first/last agnostic
-        binomial_filter = np.reshape(
-            binomial_filter, (self.filter_size, self.filter_size, input_shape[3], 1)
-        )
+        binomial_filter = np.reshape(binomial_filter, (self.filter_size, self.filter_size, input_shape[3], 1))
         blur_init = keras.initializers.constant(binomial_filter)
 
         self.blur_kernel = self.add_weight(
@@ -135,9 +133,7 @@ class MaxBlurPooling2D(keras.layers.Layer):
             strides=(1, 1),
             padding=self.padding,
         )
-        x = ops.depthwise_conv(
-            x, self.blur_kernel, padding=self.padding, strides=(self.pool_size, self.pool_size)
-        )
+        x = ops.depthwise_conv(x, self.blur_kernel, padding=self.padding, strides=(self.pool_size, self.pool_size))
 
         return x
 
@@ -375,9 +371,7 @@ class StochasticDepth(keras.layers.Layer):
         if training:
             keep_prob = 1 - self.drop_prob
             shape = (keras.ops.shape(x)[0],) + (1,) * (len(x.shape) - 1)
-            random_tensor = keep_prob + keras.random.uniform(
-                shape, 0, 1, seed=self.seed_generator, dtype=x.dtype
-            )
+            random_tensor = keep_prob + keras.random.uniform(shape, 0, 1, seed=self.seed_generator, dtype=x.dtype)
             random_tensor = keras.ops.floor(random_tensor)
             return (x / keep_prob) * random_tensor
         return x
@@ -405,8 +399,7 @@ class MLP(keras.layers.Layer):
         self.use_bias = use_bias
 
         self.dense_layers = [
-            keras.layers.Dense(units, activation=self.activation, use_bias=self.use_bias)
-            for units in self.hidden_units
+            keras.layers.Dense(units, activation=self.activation, use_bias=self.use_bias) for units in self.hidden_units
         ]
         self.dropout_layers = [keras.layers.Dropout(self.dropout_rate) for _ in self.hidden_units]
 
@@ -439,9 +432,7 @@ class VocabularyProjection(keras.layers.Layer):
         super().__init__(**kwargs)
         self.vocabulary_size = vocabulary_size
         self.dropout_rate = dropout_rate
-        self.dropout = (
-            keras.layers.Dropout(self.dropout_rate) if self.dropout_rate is not None else None
-        )
+        self.dropout = keras.layers.Dropout(self.dropout_rate) if self.dropout_rate is not None else None
         self.classifier = keras.layers.Dense(self.vocabulary_size, activation="softmax")
 
     def build(self, input_shape):

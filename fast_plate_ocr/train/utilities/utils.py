@@ -16,7 +16,7 @@ import numpy.typing as npt
 
 from fast_plate_ocr.core.process import read_and_resize_plate_image
 from fast_plate_ocr.core.types import ImageColorMode, ImageInterpolation, PaddingColor
-from fast_plate_ocr.train.model.config import PlateOCRConfig
+from fast_plate_ocr.train.model.config import PlateConfig
 from fast_plate_ocr.train.model.loss import cce_loss, focal_cce_loss
 from fast_plate_ocr.train.model.metric import (
     cat_acc_metric,
@@ -45,16 +45,14 @@ def target_transform(
 
 def _register_custom_keras():
     base_pkg = "fast_plate_ocr.train.model"
-    for _, name, _ in pkgutil.walk_packages(
-        import_module(base_pkg).__path__, prefix=f"{base_pkg}."
-    ):
+    for _, name, _ in pkgutil.walk_packages(import_module(base_pkg).__path__, prefix=f"{base_pkg}."):
         if any(m in name for m in ("layers",)):
             import_module(name)
 
 
 def load_keras_model(
     model_path: str | pathlib.Path,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
 ) -> keras.Model:
     """
     Utility helper function to load the keras OCR model.
@@ -113,9 +111,7 @@ def load_images_from_folder(  # noqa: PLR0913
     Return all images read from a directory. This uses the same read function used during training.
     """
     # pylint: disable=too-many-arguments
-    image_paths = sorted(
-        str(f.resolve()) for f in img_dir.iterdir() if f.is_file() and f.suffix in IMG_EXTENSIONS
-    )
+    image_paths = sorted(str(f.resolve()) for f in img_dir.iterdir() if f.is_file() and f.suffix in IMG_EXTENSIONS)
     if limit:
         image_paths = image_paths[:limit]
     if shuffle:

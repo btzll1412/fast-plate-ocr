@@ -32,9 +32,7 @@ def dummy_dataset() -> Iterator[pathlib.Path]:
             cv2.imwrite(str(img_path), img)
             rel_paths.append(str(img_path.relative_to(root)))
 
-        annotations = pd.DataFrame(
-            {"image_path": rel_paths, "plate_text": ["ABC123", "XYZ987", "CAR007"]}
-        )
+        annotations = pd.DataFrame({"image_path": rel_paths, "plate_text": ["ABC123", "XYZ987", "CAR007"]})
         csv_path = root / "annotations.csv"
         annotations.to_csv(csv_path, index=False)
 

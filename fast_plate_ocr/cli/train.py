@@ -373,16 +373,13 @@ def train(  # noqa: PLR0915
 
     if val_dataset.region_recognition != train_dataset.region_recognition:
         raise ValueError(
-            "Mismatch between training and validation datasets: region labels available in "
-            "only one of them."
+            "Mismatch between training and validation datasets: region labels available in only one of them."
         )
 
     has_region_head = train_dataset.region_recognition
 
     # Map the logical metric name to the actual logs key Keras will emit.
-    monitor_metric_name = resolve_metric_name_for_logs(
-        early_stopping_metric, has_region_head=has_region_head
-    )
+    monitor_metric_name = resolve_metric_name_for_logs(early_stopping_metric, has_region_head=has_region_head)
 
     monitor_mode = EVAL_METRICS[early_stopping_metric]
 
@@ -404,14 +401,10 @@ def train(  # noqa: PLR0915
     )
 
     optimizer = AdamW(cosine_decay, weight_decay=weight_decay, clipnorm=clipnorm, use_ema=use_ema)
-    optimizer.exclude_from_weight_decay(
-        var_names=[name.strip() for name in wd_ignore.split(",") if name.strip()]
-    )
+    optimizer.exclude_from_weight_decay(var_names=[name.strip() for name in wd_ignore.split(",") if name.strip()])
 
     if loss == "cce":
-        loss_fn = cce_loss(
-            vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing
-        )
+        loss_fn = cce_loss(vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing)
     elif loss == "focal_cce":
         loss_fn = focal_cce_loss(
             vocabulary_size=plate_config.vocabulary_size,

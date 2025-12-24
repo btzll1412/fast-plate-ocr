@@ -127,9 +127,7 @@ def dataset_stats(annotations: Path, plate_config_file: Path, top_chars: int, wo
         tbl_char.add_row(escape(ch), str(cnt))
 
     group = Group(tbl_len, tbl_h, tbl_w, tbl_ar, tbl_ext, tbl_char)
-    console.print(
-        Panel.fit(group, title="Dataset Statistics", border_style="green", box=box.SQUARE)
-    )
+    console.print(Panel.fit(group, title="Dataset Statistics", border_style="green", box=box.SQUARE))
 
 
 if __name__ == "__main__":

@@ -197,9 +197,7 @@ class _MaxBlurPooling2D(BaseModel):
     padding: PaddingTypeStr = "same"
 
     def to_keras_layer(self) -> keras.layers.Layer:
-        return MaxBlurPooling2D(
-            pool_size=self.pool_size, filter_size=self.filter_size, padding=self.padding
-        )
+        return MaxBlurPooling2D(pool_size=self.pool_size, filter_size=self.filter_size, padding=self.padding)
 
 
 class _MaxPooling2D(BaseModel):
@@ -358,8 +356,7 @@ class _CCTTransformerEncoderConfig(BaseModel):
     def _consistency_checks(self):
         if self.units[-1] != self.projection_dim:
             raise ValueError(
-                "'units[-1]' must equal 'projection_dim' "
-                f"(got {self.units[-1]} vs {self.projection_dim})."
+                f"'units[-1]' must equal 'projection_dim' (got {self.units[-1]} vs {self.projection_dim})."
             )
         return self
 

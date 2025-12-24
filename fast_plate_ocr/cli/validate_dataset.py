@@ -92,8 +92,7 @@ def _validate_dataset(
                 errors.append(
                     (
                         line_no,
-                        f"Plate too long ({len(plate)}>{cfg.max_plate_slots}):"
-                        f" '{plate}' [{img_path}]",
+                        f"Plate too long ({len(plate)}>{cfg.max_plate_slots}): '{plate}' [{img_path}]",
                     )
                 )
                 progress.update(task, advance=1)
@@ -101,9 +100,7 @@ def _validate_dataset(
 
             bad_chars = set(plate) - set(cfg.alphabet)
             if bad_chars:
-                errors.append(
-                    (line_no, f"Invalid chars {bad_chars} in plate '{plate}' [{img_path}]")
-                )
+                errors.append((line_no, f"Invalid chars {bad_chars} in plate '{plate}' [{img_path}]"))
                 progress.update(task, advance=1)
                 continue
 
@@ -208,26 +205,19 @@ def validate_dataset(
     errors, warnings, cleaned = _validate_dataset(df_annots, cfg, min_height, min_width)
 
     # Make cleaned dataset img_path relative (expected format)
-    cleaned["image_path"] = cleaned["image_path"].apply(
-        lambda p: str(Path(p).relative_to(csv_root))
-    )
+    cleaned["image_path"] = cleaned["image_path"].apply(lambda p: str(Path(p).relative_to(csv_root)))
 
     rich_report(errors, warnings)
 
     if export_fixed:
         export_path = csv_root / Path(export_fixed).name
         if export_path.resolve() == annotations_file.resolve():
-            console.print(
-                "[yellow]⚠️ Skipping export: make sure you don't "
-                "overwrite original annotations file.[/]"
-            )
+            console.print("[yellow]⚠️ Skipping export: make sure you don't overwrite original annotations file.[/]")
         elif export_path.exists():
             console.print(f"[yellow]⚠️ Skipping export: file already exists at {export_path}[/]")
         else:
             cleaned.to_csv(export_path, index=False)
-            console.print(
-                f"[green]✅ Wrote cleaned CSV with {len(cleaned)} rows at {export_path} [/]"
-            )
+            console.print(f"[green]✅ Wrote cleaned CSV with {len(cleaned)} rows at {export_path} [/]")
 
     if errors and not warn_only:
         sys.exit(1)

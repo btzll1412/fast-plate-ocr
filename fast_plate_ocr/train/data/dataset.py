@@ -13,7 +13,7 @@ import pandas as pd
 from keras.src.trainers.data_adapters.py_dataset_adapter import PyDataset
 
 from fast_plate_ocr.core.process import read_and_resize_plate_image
-from fast_plate_ocr.train.model.config import PlateOCRConfig
+from fast_plate_ocr.train.model.config import PlateConfig
 from fast_plate_ocr.train.utilities import utils
 
 
@@ -25,7 +25,7 @@ class PlateRecognitionPyDataset(PyDataset):
     def __init__(
         self,
         annotations_file: str | os.PathLike,
-        plate_config: PlateOCRConfig,
+        plate_config: PlateConfig,
         batch_size: int,
         transform: A.Compose | None = None,
         shuffle: bool = True,
@@ -66,14 +66,9 @@ class PlateRecognitionPyDataset(PyDataset):
             if self.annotations["region"].isna().any():
                 raise ValueError("Found NaN values in 'region' column.")
             # Validate regions present in CSV against config
-            missing = set(self.annotations["region"].unique()) - set(
-                self.plate_config.plate_regions
-            )
+            missing = set(self.annotations["region"].unique()) - set(self.plate_config.plate_regions)
             if missing:
-                raise ValueError(
-                    f"Found region labels in CSV not present "
-                    f"in config.plate_regions: {sorted(missing)}"
-                )
+                raise ValueError(f"Found region labels in CSV not present in config.plate_regions: {sorted(missing)}")
             self.region_to_idx = {c: i for i, c in enumerate(self.plate_config.plate_regions)}
             self.num_regions = len(self.plate_config.plate_regions)
             self._region_eye = np.eye(self.num_regions, dtype=np.float32)
@@ -136,9 +131,7 @@ class PlateRecognitionPyDataset(PyDataset):
 
     def _shuffle_data(self) -> None:
         if self.shuffle:
-            self.annotations = self.annotations.sample(frac=1.0, random_state=None).reset_index(
-                drop=True
-            )
+            self.annotations = self.annotations.sample(frac=1.0, random_state=None).reset_index(drop=True)
 
     def on_epoch_begin(self) -> None:
         # Optionally shuffle the dataset at the start of each epoch

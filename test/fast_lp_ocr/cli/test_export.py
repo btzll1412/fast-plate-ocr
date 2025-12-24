@@ -14,7 +14,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from fast_plate_ocr.cli.export import export as export_cli
 from fast_plate_ocr.train.model.config import (
-    PlateOCRConfig,
+    PlateConfig,
     load_plate_config_from_yaml,
 )
 from fast_plate_ocr.train.model.model_builders import build_model
@@ -29,9 +29,7 @@ MODEL_CONFIG_PATHS_TO_TEST = [m for m in MODEL_CONFIG_PATHS if m.stem not in EXC
 """Model configs to test."""
 
 
-def _build_and_save_keras_model(
-    model_cfg_path: Path, plate_cfg_path: Path, save_dir: Path
-) -> tuple[Path, PlateOCRConfig]:
+def _build_and_save_keras_model(model_cfg_path: Path, plate_cfg_path: Path, save_dir: Path) -> tuple[Path, PlateConfig]:
     model_cfg = load_model_config_from_yaml(model_cfg_path)
     plate_cfg = load_plate_config_from_yaml(plate_cfg_path)
 
@@ -54,9 +52,7 @@ def test_export_to_onnx(
     plate_config_path = LATIN_VOCAB_PLATE_CONFIG
     runner = CliRunner()
     # Build and save the Keras model
-    model_save_path, _ = _build_and_save_keras_model(
-        model_config_path, LATIN_VOCAB_PLATE_CONFIG, tmp_path
-    )
+    model_save_path, _ = _build_and_save_keras_model(model_config_path, LATIN_VOCAB_PLATE_CONFIG, tmp_path)
     # Export with given parameters
     args = [
         "-m",
@@ -85,9 +81,7 @@ def test_export_to_onnx_nchw_float32(
     plate_config_path = LATIN_VOCAB_PLATE_CONFIG
     runner = CliRunner()
     # Build and save the Keras model
-    model_save_path, plate_config = _build_and_save_keras_model(
-        model_config_path, plate_config_path, tmp_path
-    )
+    model_save_path, plate_config = _build_and_save_keras_model(model_config_path, plate_config_path, tmp_path)
     # Export with channels first and float32 input dtype
     args = [
         "-m",
@@ -116,9 +110,7 @@ def test_export_to_onnx_nchw_float32(
     dims = graph_input.type.tensor_type.shape.dim
     assert len(dims) == 4, f"Input should have 4 dims, got {len(dims)}"
     c_dim_value = dims[1].dim_value
-    assert c_dim_value == plate_config.num_channels, (
-        f"Expected {plate_config.num_channels} num of channels"
-    )
+    assert c_dim_value == plate_config.num_channels, f"Expected {plate_config.num_channels} num of channels"
 
 
 @pytest.mark.parametrize("model_config_path", MODEL_CONFIG_PATHS_TO_TEST)
