@@ -57,6 +57,10 @@ class PlateOCRConfig:  # pylint: disable=too-many-instance-attributes
     Padding color used when keep_aspect_ratio is True. For grayscale images, this should be a single
     integer and for RGB images, this must be a tuple of three integers.
     """
+    plate_regions: list[str] | None = None
+    """
+    Optional list specifying the regions/countries whose license plates the model can recognize.
+    """
 
     @property
     def vocabulary_size(self) -> int:
@@ -69,6 +73,10 @@ class PlateOCRConfig:  # pylint: disable=too-many-instance-attributes
     @property
     def num_channels(self) -> int:
         return 3 if self.image_color_mode == "rgb" else 1
+
+    @property
+    def has_region_recognition(self) -> bool:
+        return bool(self.plate_regions)
 
     @classmethod
     def from_yaml(cls, path: PathLike) -> "PlateOCRConfig":

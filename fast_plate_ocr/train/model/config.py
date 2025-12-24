@@ -26,7 +26,7 @@ An integer in the range [0, 255], used for color channel values.
 
 class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
     """
-    Model License Plate OCR config.
+    Model License Plate config.
     """
 
     max_plate_slots: PositiveInt
@@ -66,6 +66,10 @@ class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
     Padding color used when keep_aspect_ratio is True. For grayscale images, this should be a single
     integer and for RGB images, this must be a tuple of three integers.
     """
+    plate_regions: list[str] | None = None
+    """
+    Optional list specifying the regions/countries whose license plates the model can recognize.
+    """
 
     @computed_field  # type: ignore[misc]
     @property
@@ -82,6 +86,11 @@ class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
     def num_channels(self) -> int:
         return 3 if self.image_color_mode == "rgb" else 1
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def has_region_recognition(self) -> bool:
+        return bool(self.plate_regions)
+
     @model_validator(mode="after")
     def check_alphabet_and_pad(self) -> "PlateOCRConfig":
         # `pad_char` must be in alphabet
@@ -90,6 +99,13 @@ class PlateOCRConfig(BaseModel, extra="forbid", frozen=True):
         # all chars in alphabet must be unique
         if len(set(self.alphabet)) != len(self.alphabet):
             raise ValueError("Alphabet must not contain duplicate characters.")
+        return self
+
+    @model_validator(mode="after")
+    def check_plate_regions(self) -> "PlateOCRConfig":
+        # Ensure there are no duplicate characters in plate_regions
+        if self.plate_regions and len(set(self.plate_regions)) != len(self.plate_regions):
+            raise ValueError("Plate regions must not contain duplicate characters.")
         return self
 
 

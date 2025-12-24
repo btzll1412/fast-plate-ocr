@@ -60,29 +60,35 @@ def load_keras_model(
     Utility helper function to load the keras OCR model.
     """
     _register_custom_keras()
+    cat_acc = cat_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    plate_acc = plate_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    top3_acc = top_3_k_metric(
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    len_acc = plate_len_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+        pad_token_index=plate_config.pad_idx,
+    )
+
     custom_objects = {
-        "cce": cce_loss(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "focal_cce": focal_cce_loss(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "cat_acc": cat_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "plate_acc": plate_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "top_3_k": top_3_k_metric(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "plate_len_acc": plate_len_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-            pad_token_index=plate_config.pad_idx,
-        ),
+        "cce": cce_loss(vocabulary_size=plate_config.vocabulary_size),
+        "focal_cce": focal_cce_loss(vocabulary_size=plate_config.vocabulary_size),
+        "char_acc": cat_acc,
+        "acc": plate_acc,
+        "top3_acc": top3_acc,
+        "len_acc": len_acc,
+        # Metrics old names for backwards compatibility
+        "cat_acc": cat_acc,
+        "plate_acc": plate_acc,
+        "top_3_k": top3_acc,
+        "plate_len_acc": len_acc,
     }
     model = keras.models.load_model(model_path, custom_objects=custom_objects)
     return model

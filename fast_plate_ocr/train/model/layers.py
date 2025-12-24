@@ -551,3 +551,26 @@ class PatchExtractor(keras.layers.Layer):
         config = super().get_config()
         config.update({"patch_size": self.patch_size})
         return config
+
+
+@keras.saving.register_keras_serializable(package="fast_plate_ocr")
+class SequencePooling(keras.layers.Layer):
+    """
+    SeqPool layer, alternative to GAP and to CLS token.
+
+    Modified from https://keras.io/examples/vision/image_classification_with_vision_transformer.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.attention = keras.layers.Dense(1)
+
+    def call(self, x):
+        attention_weights = keras.ops.softmax(self.attention(x), axis=1)
+        attention_weights = keras.ops.transpose(attention_weights, axes=(0, 2, 1))
+        weighted_representation = keras.ops.matmul(attention_weights, x)
+        return keras.ops.squeeze(weighted_representation, -2)
+
+    def get_config(self):
+        config = super().get_config()
+        return config

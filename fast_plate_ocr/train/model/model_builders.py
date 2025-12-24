@@ -12,6 +12,7 @@ from fast_plate_ocr.train.model.config import PlateOCRConfig
 from fast_plate_ocr.train.model.layers import (
     PatchExtractor,
     PositionEmbedding,
+    SequencePooling,
     TokenReducer,
     TransformerBlock,
     VocabularyProjection,
@@ -26,8 +27,8 @@ def _build_stem_from_config(specs: Sequence[LayerConfig]) -> keras.Sequential:
 def _build_cct_model(
     cfg: CCTModelConfig,
     input_shape: tuple[int, int, int],
-    max_plate_slots: int,
-    vocabulary_size: int,
+    plate_cfg: PlateOCRConfig,
+    enable_region_head: bool,
 ) -> keras.Model:
     # 1. Input
     inputs = layers.Input(shape=input_shape)
@@ -66,30 +67,43 @@ def _build_cct_model(
         )(x)
 
     # 8. Reduce to a fixed number of tokens, then project to vocab
-    x = TokenReducer(
-        num_tokens=max_plate_slots,
+    token_features = TokenReducer(
+        num_tokens=plate_cfg.max_plate_slots,
         projection_dim=cfg.transformer_encoder.projection_dim,
         num_heads=cfg.transformer_encoder.token_reducer_heads,
     )(x)
 
-    logits = VocabularyProjection(
-        vocabulary_size=vocabulary_size,
+    plate_logits = VocabularyProjection(
+        vocabulary_size=plate_cfg.vocabulary_size,
         dropout_rate=cfg.transformer_encoder.head_mlp_dropout,
-        name="vocab_projection",
-    )(x)
+        name="plate",
+    )(token_features)
 
-    return keras.Model(inputs, logits, name="CCT_OCR")
+    if enable_region_head:
+        pooled_tokens = SequencePooling(name="region_seq_pool")(x)
+        region_logits = layers.Dense(
+            len(plate_cfg.plate_regions), activation="softmax", name="region"
+        )(pooled_tokens)
+        outputs = {"plate": plate_logits, "region": region_logits}
+    else:
+        outputs = {"plate": plate_logits}
+
+    return keras.Model(inputs, outputs, name="CCT_OCR")
 
 
-def build_model(model_cfg: AnyModelConfig, plate_cfg: PlateOCRConfig) -> keras.Model:
+def build_model(
+    model_cfg: AnyModelConfig,
+    plate_cfg: PlateOCRConfig,
+    enable_region_head: bool = False,
+) -> keras.Model:
     """
-    Build a Keras OCR model based on the specified model and plate configuration.
+    Build a Keras model based on the specified model and plate configuration.
     """
     if model_cfg.model == "cct":
         return _build_cct_model(
             cfg=model_cfg,
             input_shape=(plate_cfg.img_height, plate_cfg.img_width, plate_cfg.num_channels),
-            max_plate_slots=plate_cfg.max_plate_slots,
-            vocabulary_size=plate_cfg.vocabulary_size,
+            plate_cfg=plate_cfg,
+            enable_region_head=enable_region_head,
         )
     raise ValueError(f"Unsupported model type: {model_cfg.model!r}")

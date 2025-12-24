@@ -21,7 +21,6 @@ from keras.src.callbacks import (
 )
 from keras.src.optimizers import AdamW
 
-import fast_plate_ocr.train.model.model_builders
 from fast_plate_ocr.cli.utils import print_params, print_train_details
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
@@ -35,6 +34,7 @@ from fast_plate_ocr.train.model.metric import (
     plate_len_acc_metric,
     top_3_k_metric,
 )
+from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 # ruff: noqa: PLR0913
@@ -43,12 +43,40 @@ from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     "val_plate_acc": "max",
-    "val_cat_acc": "max",
-    "val_top_3_k_acc": "max",
+    "val_plate_char_acc": "max",
+    "val_plate_top3_acc": "max",
     "val_plate_len_acc": "max",
     "val_loss": "min",
+    "val_plate_loss": "min",
+    "val_region_acc": "max",
+    "val_region_top3_acc": "max",
+    "val_region_loss": "min",
 }
 """Eval metric to monitor."""
+
+
+def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -> str:
+    """
+    Map a logical early-stopping metric name to the actual logs key.
+
+    Since we always compile metrics under the 'plate' head, single- and multi-head
+    runs both emit 'val_plate_*' keys. The only thing we need to guard against is
+    asking for region metrics when there is no region head.
+    """
+    region_metrics = {
+        "val_region_acc",
+        "val_region_top3_acc",
+        "val_region_loss",
+    }
+
+    if not has_region_head and requested_metric in region_metrics:
+        raise ValueError(
+            f"Early-stopping metric '{requested_metric}' requires region recognition, "
+            "but the dataset/model does not have a region head."
+        )
+
+    # No remapping needed anymore; the logs always use 'plate_*' names.
+    return requested_metric
 
 
 @click.command(context_settings={"max_content_width": 120})
@@ -151,6 +179,20 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     show_default=True,
     type=float,
     help="Amount of label smoothing to apply.",
+)
+@click.option(
+    "--plate-loss-weight",
+    default=0.6,
+    show_default=True,
+    type=float,
+    help="Weight for the plate recognition loss.",
+)
+@click.option(
+    "--region-loss-weight",
+    default=0.4,
+    show_default=True,
+    type=float,
+    help="Weight for the region recognition loss (when enabled).",
 )
 @click.option(
     "--mixed-precision-policy",
@@ -256,7 +298,7 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     help="Sets all random seeds (Python, NumPy, and backend framework, e.g. TF).",
 )
 @print_params(table_title="CLI Training Parameters", c1_title="Parameter", c2_title="Details")
-def train(
+def train(  # noqa: PLR0915
     model_config_file: pathlib.Path,
     plate_config_file: pathlib.Path,
     annotations: pathlib.Path,
@@ -272,6 +314,8 @@ def train(
     focal_alpha: float,
     focal_gamma: float,
     label_smoothing: float,
+    plate_loss_weight: float,
+    region_loss_weight: float,
     mixed_precision_policy: str | None,
     batch_size: int,
     workers: int,
@@ -327,8 +371,23 @@ def train(
         max_queue_size=max_queue_size,
     )
 
+    if val_dataset.region_recognition != train_dataset.region_recognition:
+        raise ValueError(
+            "Mismatch between training and validation datasets: region labels available in "
+            "only one of them."
+        )
+
+    has_region_head = train_dataset.region_recognition
+
+    # Map the logical metric name to the actual logs key Keras will emit.
+    monitor_metric_name = resolve_metric_name_for_logs(
+        early_stopping_metric, has_region_head=has_region_head
+    )
+
+    monitor_mode = EVAL_METRICS[early_stopping_metric]
+
     # Train
-    model = fast_plate_ocr.train.model.model_builders.build_model(model_config, plate_config)
+    model = build_model(model_config, plate_config, enable_region_head=has_region_head)
 
     if weights_path:
         model.load_weights(weights_path, skip_mismatch=True)
@@ -363,31 +422,55 @@ def train(
     else:
         raise ValueError(f"Unsupported loss type: {loss}")
 
+    base_metrics = [
+        cat_acc_metric(
+            max_plate_slots=plate_config.max_plate_slots,
+            vocabulary_size=plate_config.vocabulary_size,
+        ),
+        plate_acc_metric(
+            max_plate_slots=plate_config.max_plate_slots,
+            vocabulary_size=plate_config.vocabulary_size,
+        ),
+        top_3_k_metric(vocabulary_size=plate_config.vocabulary_size),
+        plate_len_acc_metric(
+            max_plate_slots=plate_config.max_plate_slots,
+            vocabulary_size=plate_config.vocabulary_size,
+            pad_token_index=plate_config.pad_idx,
+        ),
+    ]
+
+    if train_dataset.region_recognition:
+        loss_config = {
+            "plate": loss_fn,
+            "region": keras.losses.CategoricalCrossentropy(),
+        }
+        loss_weights = {
+            "plate": plate_loss_weight,
+            "region": region_loss_weight,
+        }
+        metrics_config = {
+            "plate": base_metrics,
+            "region": [
+                keras.metrics.CategoricalAccuracy(name="acc"),
+                keras.metrics.TopKCategoricalAccuracy(k=3, name="top3_acc"),
+            ],
+        }
+    else:
+        loss_config = {"plate": loss_fn}
+        loss_weights = {"plate": plate_loss_weight}
+        metrics_config = {"plate": base_metrics}
+
     model.compile(
-        loss=loss_fn,
+        loss=loss_config,
+        loss_weights=loss_weights,
         jit_compile=False,
         optimizer=optimizer,
-        metrics=[
-            cat_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-            ),
-            plate_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-            ),
-            top_3_k_metric(vocabulary_size=plate_config.vocabulary_size),
-            plate_len_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-                pad_token_index=plate_config.pad_idx,
-            ),
-        ],
+        metrics=metrics_config,
     )
 
     output_dir /= datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_dir.mkdir(parents=True, exist_ok=True)
-    model_file_path = output_dir / "ckpt-epoch_{epoch:02d}-acc_{val_plate_acc:.3f}.keras"
+    model_file_path = output_dir / "best.keras"
 
     # Save params and configs used for training
     shutil.copy(model_config_file, output_dir / "model_config.yaml")
@@ -404,9 +487,9 @@ def train(
     callbacks = [
         # Stop training when early_stopping_metric doesn't improve for X epochs
         EarlyStopping(
-            monitor=early_stopping_metric,
+            monitor=monitor_metric_name,
             patience=early_stopping_patience,
-            mode=EVAL_METRICS[early_stopping_metric],
+            mode=monitor_mode,
             restore_best_weights=False,
             verbose=1,
         ),
@@ -417,8 +500,8 @@ def train(
         ModelCheckpoint(output_dir / "last.keras", save_weights_only=False, save_best_only=False),
         ModelCheckpoint(
             model_file_path,
-            monitor=early_stopping_metric,
-            mode=EVAL_METRICS[early_stopping_metric],
+            monitor=monitor_metric_name,
+            mode=monitor_mode,
             save_weights_only=False,
             save_best_only=True,
             verbose=1,
