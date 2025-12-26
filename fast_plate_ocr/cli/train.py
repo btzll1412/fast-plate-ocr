@@ -38,7 +38,7 @@ from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 # ruff: noqa: PLR0913
-# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments, too-many-branches
 
 
 EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
@@ -153,25 +153,46 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     help="Gradient clipping norm value for the AdamW optimizer.",
 )
 @click.option(
-    "--loss",
+    "--plate-loss",
     default="cce",
     type=click.Choice(["cce", "focal_cce"], case_sensitive=False),
     show_default=True,
     help="Loss function to use during training.",
 )
 @click.option(
-    "--focal-alpha",
+    "--plate-focal-alpha",
     default=0.25,
     show_default=True,
     type=float,
-    help="Alpha parameter for focal loss. Applicable only when '--loss' is 'focal_cce'.",
+    help="Alpha parameter for plate focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
 )
 @click.option(
-    "--focal-gamma",
+    "--plate-focal-gamma",
     default=2.0,
     show_default=True,
     type=float,
-    help="Gamma parameter for focal loss. Applicable only when '--loss' is 'focal_cce'.",
+    help="Gamma parameter for plate focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
+)
+@click.option(
+    "--region-loss",
+    default="cce",
+    type=click.Choice(["cce", "focal_cce"], case_sensitive=False),
+    show_default=True,
+    help="Loss function for region recognition.",
+)
+@click.option(
+    "--region-focal-alpha",
+    default=0.25,
+    show_default=True,
+    type=float,
+    help="Alpha parameter for region focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
+)
+@click.option(
+    "--region-focal-gamma",
+    default=2.0,
+    show_default=True,
+    type=float,
+    help="Gamma parameter for region focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
 )
 @click.option(
     "--label-smoothing",
@@ -298,7 +319,7 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     help="Sets all random seeds (Python, NumPy, and backend framework, e.g. TF).",
 )
 @print_params(table_title="CLI Training Parameters", c1_title="Parameter", c2_title="Details")
-def train(  # noqa: PLR0915
+def train(  # noqa: PLR0912, PLR0915
     model_config_file: pathlib.Path,
     plate_config_file: pathlib.Path,
     annotations: pathlib.Path,
@@ -310,9 +331,12 @@ def train(  # noqa: PLR0915
     warmup_fraction: float,
     weight_decay: float,
     clipnorm: float,
-    loss: str,
-    focal_alpha: float,
-    focal_gamma: float,
+    plate_loss: str,
+    plate_focal_alpha: float,
+    plate_focal_gamma: float,
+    region_loss: str,
+    region_focal_alpha: float,
+    region_focal_gamma: float,
     label_smoothing: float,
     plate_loss_weight: float,
     region_loss_weight: float,
@@ -403,27 +427,28 @@ def train(  # noqa: PLR0915
     optimizer = AdamW(cosine_decay, weight_decay=weight_decay, clipnorm=clipnorm, use_ema=use_ema)
     optimizer.exclude_from_weight_decay(var_names=[name.strip() for name in wd_ignore.split(",") if name.strip()])
 
-    if loss == "cce":
-        loss_fn = cce_loss(vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing)
-    elif loss == "focal_cce":
-        loss_fn = focal_cce_loss(
+    if plate_loss == "cce":
+        plate_loss_fn = cce_loss(vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing)
+    elif plate_loss == "focal_cce":
+        plate_loss_fn = focal_cce_loss(
             vocabulary_size=plate_config.vocabulary_size,
-            alpha=focal_alpha,
-            gamma=focal_gamma,
+            alpha=plate_focal_alpha,
+            gamma=plate_focal_gamma,
             label_smoothing=label_smoothing,
         )
     else:
-        raise ValueError(f"Unsupported loss type: {loss}")
+        raise ValueError(f"Unsupported plate loss type: {plate_loss}")
+
+    if region_loss == "cce":
+        region_loss_fn = keras.losses.CategoricalCrossentropy()
+    elif region_loss == "focal_cce":
+        region_loss_fn = keras.losses.CategoricalFocalCrossentropy(alpha=region_focal_alpha, gamma=region_focal_gamma)
+    else:
+        raise ValueError(f"Unsupported region loss type: {region_loss}")
 
     base_metrics = [
-        cat_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        plate_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
+        cat_acc_metric(max_plate_slots=plate_config.max_plate_slots, vocabulary_size=plate_config.vocabulary_size),
+        plate_acc_metric(max_plate_slots=plate_config.max_plate_slots, vocabulary_size=plate_config.vocabulary_size),
         top_3_k_metric(vocabulary_size=plate_config.vocabulary_size),
         plate_len_acc_metric(
             max_plate_slots=plate_config.max_plate_slots,
@@ -433,14 +458,8 @@ def train(  # noqa: PLR0915
     ]
 
     if train_dataset.region_recognition:
-        loss_config = {
-            "plate": loss_fn,
-            "region": keras.losses.CategoricalCrossentropy(),
-        }
-        loss_weights = {
-            "plate": plate_loss_weight,
-            "region": region_loss_weight,
-        }
+        loss_config = {"plate": plate_loss_fn, "region": region_loss_fn}
+        loss_weights = {"plate": plate_loss_weight, "region": region_loss_weight}
         metrics_config = {
             "plate": base_metrics,
             "region": [
@@ -449,7 +468,7 @@ def train(  # noqa: PLR0915
             ],
         }
     else:
-        loss_config = {"plate": loss_fn}
+        loss_config = {"plate": plate_loss_fn}
         loss_weights = {"plate": plate_loss_weight}
         metrics_config = {"plate": base_metrics}
 

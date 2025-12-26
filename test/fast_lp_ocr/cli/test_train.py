@@ -51,7 +51,7 @@ def test_train_cli_runs_successfully(
             "--workers",
             "0",
             "--no-use-multiprocessing",
-            "--loss",
+            "--plate-loss",
             "cce",
         ],
     )
@@ -70,6 +70,6 @@ def test_train_cli_runs_successfully(
 
     last_ckpt = run_dir / "last.keras"
     assert last_ckpt.exists(), "Expected last checkpoint to be saved"
-    # Ensure we can load properly trained model
+    # Ensure we can load a properly trained model
     plate_config = load_plate_config_from_yaml(run_dir / "plate_config.yaml")
     load_keras_model(last_ckpt, plate_config)
