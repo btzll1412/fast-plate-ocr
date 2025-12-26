@@ -78,6 +78,8 @@ def _build_cct_model(
     )(token_features)
 
     if enable_region_head:
+        if not plate_cfg.plate_regions:
+            raise ValueError("Region head requested, but no regions are defined in the plate config.")
         pooled_tokens = SequencePooling(name="region_seq_pool")(x)
         region_logits = layers.Dense(len(plate_cfg.plate_regions), activation="softmax", name="region")(pooled_tokens)
         outputs = {"plate": plate_logits, "region": region_logits}

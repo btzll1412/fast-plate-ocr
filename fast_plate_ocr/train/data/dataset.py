@@ -62,6 +62,8 @@ class PlateRecognitionPyDataset(PyDataset):
 
         # Build mapping for regions-recognition if active
         if self.region_recognition:
+            if not self.plate_config.plate_regions:
+                raise ValueError("plate_regions must be defined and non-empty when region recognition is enabled.")
             # Validate there are no missing values
             if self.annotations["region"].isna().any():
                 raise ValueError("Found NaN values in 'region' column.")
@@ -97,7 +99,7 @@ class PlateRecognitionPyDataset(PyDataset):
             plate_text = row.plate_text
             # Read and process image
             x = read_and_resize_plate_image(
-                image_path=image_path,
+                image_path=image_path,  # type: ignore[arg-type]
                 img_height=self.plate_config.img_height,
                 img_width=self.plate_config.img_width,
                 image_color_mode=self.plate_config.image_color_mode,
@@ -107,7 +109,7 @@ class PlateRecognitionPyDataset(PyDataset):
             )
             # Transform target for plate
             y_plate = utils.target_transform(
-                plate_text=plate_text,
+                plate_text=plate_text,  # type: ignore[arg-type]
                 max_plate_slots=self.plate_config.max_plate_slots,
                 alphabet=self.plate_config.alphabet,
                 pad_char=self.plate_config.pad_char,
@@ -122,6 +124,7 @@ class PlateRecognitionPyDataset(PyDataset):
         batch_y_plate_np = np.array(batch_y_plate)
 
         if self.region_recognition:
+            assert region_idx is not None
             batch_y_region_np = self._region_eye[region_idx]
             y_dict = {"plate": batch_y_plate_np, "region": batch_y_region_np}
         else:
