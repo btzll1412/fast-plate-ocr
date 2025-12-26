@@ -156,7 +156,6 @@ def test_export_to_coreml(
         str(plate_config_path),
         "--format",
         "coreml",
-        "--skip-validation",
     ]
 
     result = runner.invoke(export_cli, args)
