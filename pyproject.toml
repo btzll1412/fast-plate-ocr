@@ -167,9 +167,16 @@ disable = ["missing-class-docstring", "missing-function-docstring", "wrong-impor
 [tool.pylint.design]
 max-args = 8
 min-public-methods = 1
+max-positional-arguments = 10
+max-locals = 20
+max-statements = 60
+max-attributes = 12
 
 [tool.pylint.basic]
 no-docstring-rgx = "^__|^test_"
+
+[tool.pylint.miscellaneous]
+notes = ["FIXME", "XXX"]
 
 [tool.pytest.ini_options]
 testpaths = [

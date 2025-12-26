@@ -38,7 +38,7 @@ from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 # ruff: noqa: PLR0913
-# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
 
 
 EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
