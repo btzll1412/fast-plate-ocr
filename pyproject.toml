@@ -31,7 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13"
 ]
 dependencies = [
-    "numpy>=1.20",
+    "numpy",
     "opencv-python-headless",
     "pyyaml>=5.1",
     "rich",
