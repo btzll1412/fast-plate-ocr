@@ -16,14 +16,12 @@ from fast_plate_ocr.cli.utils import requires
 from fast_plate_ocr.core.types import TensorDataFormat
 from fast_plate_ocr.core.utils import log_time_taken
 from fast_plate_ocr.train.model.config import (
-    PlateOCRConfig,
+    PlateConfig,
     load_plate_config_from_yaml,
 )
 from fast_plate_ocr.train.utilities.utils import load_keras_model
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
 
 # ruff: noqa: PLC0415
@@ -35,26 +33,48 @@ def _dummy_input(b: int, h: int, w: int, n_c: int, dtype: DTypeLike = np.uint8) 
     return np.random.randint(0, 256, size=(b, h, w, n_c)).astype(dtype)
 
 
+def _normalize_outputs(
+    outputs,
+    names: list[str],
+):
+    """Convert Keras/ONNX outputs into a name-mapped dictionary for comparison."""
+    if isinstance(outputs, dict):
+        return {name: outputs[name] for name in names}
+    if isinstance(outputs, (list, tuple)):
+        return dict(zip(names, outputs, strict=False))
+    if len(names) != 1:
+        raise ValueError("Expected multiple outputs but received a single tensor.")
+    return {names[0]: outputs}
+
+
 def _validate_prediction(
     keras_model: keras.Model,
     exported_predict,
     x: np.ndarray,
     target: str,
+    output_names: list[str],
     rtol: float = 1e-4,
     atol: float = 1e-4,
 ) -> None:
     """Compare Keras and exported backend on a single forward pass."""
-    keras_out = keras_model.predict(x, verbose=0)
+    keras_out = _normalize_outputs(keras_model.predict(x, verbose=0), output_names)
     exported_out = exported_predict(x)
-    if not np.allclose(keras_out, exported_out, rtol=rtol, atol=atol):
-        logging.warning("%s output deviates from Keras beyond tolerance.", target.upper())
-    else:
-        logging.info("%s output matches Keras ✔", target.upper())
+    for name in output_names:
+        if not np.allclose(keras_out[name], exported_out[name], rtol=rtol, atol=atol):
+            logging.warning("%s output '%s' deviates from Keras beyond tolerance.", target.upper(), name)
+        else:
+            logging.info("%s output '%s' matches Keras ✔", target.upper(), name)
 
 
-def _make_output_path(
-    model_path: pathlib.Path, save_dir: pathlib.Path | None, new_ext: str
-) -> pathlib.Path:
+def _get_output_names(model: keras.Model) -> list[str]:
+    if isinstance(model.output, dict):
+        return list(model.output.keys())
+    if hasattr(model, "output_names") and model.output_names:
+        return list(model.output_names)
+    return [t.name.split(":")[0] for t in model.outputs]
+
+
+def _make_output_path(model_path: pathlib.Path, save_dir: pathlib.Path | None, new_ext: str) -> pathlib.Path:
     """
     Build an output filename next to the model or inside --save-dir.
 
@@ -81,7 +101,7 @@ def _make_output_path(
 
 def _prepare_model_for_onnx_export(
     model: keras.Model,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
     dynamic_batch: bool,
     input_dtype: str,
     data_format: TensorDataFormat,
@@ -94,21 +114,13 @@ def _prepare_model_for_onnx_export(
     """
     if data_format == "channels_first":
         # NxCxHxW -> NxHxWxC
-        inp_shape = (
-            plate_config.num_channels,
-            plate_config.img_height,
-            plate_config.img_width,
-        )
+        inp_shape = (plate_config.num_channels, plate_config.img_height, plate_config.img_width)
         x_in = keras.Input(shape=inp_shape, dtype=input_dtype, name="input_nchw")
         x_out = model(keras.layers.Permute((2, 3, 1))(x_in))
         export_model = keras.Model(x_in, x_out, name=f"{model.name}_nchw")
     else:
-        # Default is channels last (NxHxWxC), keep the original graph
-        inp_shape = (
-            plate_config.img_height,
-            plate_config.img_width,
-            plate_config.num_channels,
-        )
+        # Default is channels-last (NxHxWxC), keep the original graph
+        inp_shape = (plate_config.img_height, plate_config.img_width, plate_config.num_channels)
         export_model = model
 
     batch_dim = None if dynamic_batch else 1
@@ -120,7 +132,7 @@ def _prepare_model_for_onnx_export(
 @requires("onnx", "onnxruntime", "onnxslim")
 def export_onnx(  # noqa: PLR0913
     model: keras.Model,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
     out_file: pathlib.Path,
     simplify: bool,
     dynamic_batch: bool,
@@ -132,7 +144,11 @@ def export_onnx(  # noqa: PLR0913
     import onnxruntime as rt
 
     export_model, spec_shape, dummy_input = _prepare_model_for_onnx_export(
-        model, plate_config, dynamic_batch, onnx_input_dtype, onnx_data_format
+        model,
+        plate_config,
+        dynamic_batch,
+        onnx_input_dtype,
+        onnx_data_format,
     )
     spec = [keras.InputSpec(name="input", shape=spec_shape, dtype=onnx_input_dtype)]
 
@@ -158,15 +174,32 @@ def export_onnx(  # noqa: PLR0913
     # Load the newly converted ONNX model
     sess = rt.InferenceSession(out_file)
     input_name = sess.get_inputs()[0].name
-    output_names = [o.name for o in sess.get_outputs()]
+    onnx_output_names = [o.name for o in sess.get_outputs()]
+
+    if not isinstance(export_model.output, dict):
+        raise ValueError("Exporter expects dict outputs (e.g., {'plate': ..., 'region': ...}). ")
+
+    keras_keys = list(export_model.output.keys())
+
+    if len(keras_keys) != len(onnx_output_names):
+        raise ValueError(
+            f"Mismatch: Keras dict outputs ({len(keras_keys)}) vs ONNX outputs ({len(onnx_output_names)})."
+        )
 
     def _predict(x: np.ndarray):
-        return sess.run(output_names, {input_name: x})[0]
+        values = sess.run(onnx_output_names, {input_name: x})
+        return dict(zip(keras_keys, values, strict=False))
 
     if skip_validation:
         logging.info("Skipping ONNX validation.")
     else:
-        _validate_prediction(export_model, _predict, dummy_input, "ONNX")
+        _validate_prediction(
+            export_model,
+            _predict,
+            dummy_input,
+            "ONNX",
+            output_names=keras_keys,
+        )
 
     with log_time_taken("ONNX inference time"):
         _predict(dummy_input)
@@ -176,10 +209,7 @@ def export_onnx(  # noqa: PLR0913
 
 @requires("tensorflow")
 def export_tflite(
-    model: keras.Model,
-    plate_config: PlateOCRConfig,
-    out_file: pathlib.Path,
-    skip_validation: bool = False,
+    model: keras.Model, plate_config: PlateConfig, out_file: pathlib.Path, skip_validation: bool = False
 ) -> None:
     import tensorflow as tf
 
@@ -188,49 +218,49 @@ def export_tflite(
 
         converter = tf.lite.TFLiteConverter.from_saved_model(tmp_dir)
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
-
-        tflite_bytes = converter.convert()
-        out_file.write_bytes(tflite_bytes)
+        out_file.write_bytes(converter.convert())
 
     if skip_validation:
         logging.info("Skipping TFLite validation.")
         logging.info("Saved TFLite model to %s", out_file)
         return
 
+    output_names = _get_output_names(model)
+
     class _TFLiteRunner:
-        def __init__(self, path):
-            self.interp = tf.lite.Interpreter(str(path))
-            self.interp.allocate_tensors()
-            self.inp = self.interp.get_input_details()[0]["index"]
-            self.out = self.interp.get_output_details()[0]["index"]
+        def __init__(self, path: pathlib.Path, out_names: list[str]):
+            self.interp = tf.lite.Interpreter(model_path=str(path))
+            sigs = self.interp.get_signature_list()
+            self.sig = next(iter(sigs))
+            self.runner = self.interp.get_signature_runner(self.sig)
+
+            sig_meta = sigs[self.sig]
+            self.inp_name = next(iter(sig_meta["inputs"]))
+            self.out_names = out_names
 
         def __call__(self, x: np.ndarray):
-            self.interp.set_tensor(self.inp, x)
-            self.interp.invoke()
-            return self.interp.get_tensor(self.out)
+            y = self.runner(**{self.inp_name: x})
+            return {k: y[k] for k in self.out_names}
 
-    tfl_runner = _TFLiteRunner(out_file)
+    tfl_runner = _TFLiteRunner(out_file, output_names)
+
     _validate_prediction(
         model,
         tfl_runner,
-        _dummy_input(
-            1,
-            plate_config.img_height,
-            plate_config.img_width,
-            plate_config.num_channels,
-            np.float32,
-        ),
+        _dummy_input(1, plate_config.img_height, plate_config.img_width, plate_config.num_channels, np.float32),
         "TFLite",
+        output_names=output_names,
         atol=5e-3,
         rtol=5e-3,
     )
+
     logging.info("Saved TFLite model to %s", out_file)
 
 
 @requires("coremltools", "tensorflow")
 def export_coreml(
     model: keras.Model,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
     out_file: pathlib.Path,
     skip_validation: bool = False,
 ) -> None:
@@ -253,12 +283,7 @@ def export_coreml(
                 dtype=np.float32,
             )
         ]
-        mlmodel = ct.convert(
-            [func],
-            source="tensorflow",
-            convert_to="mlprogram",
-            inputs=ct_inputs,
-        )
+        mlmodel = ct.convert([func], source="tensorflow", convert_to="mlprogram", inputs=ct_inputs)
         mlmodel.save(str(out_file))
 
     if skip_validation:
@@ -267,25 +292,34 @@ def export_coreml(
 
     mlmodel = ct.models.MLModel(str(out_file))
 
+    # Keras keys (dict outputs): ["plate"] or ["plate", "region"]
+    output_names = _get_output_names(model)
+
     spec = mlmodel.get_spec()
     input_name = spec.description.input[0].name
-    output_name = spec.description.output[0].name
+
+    # CoreML output keys in a stable, declared order
+    coreml_keys = [o.name for o in spec.description.output]
+
+    if len(coreml_keys) != len(output_names):
+        raise ValueError(f"CoreML outputs {coreml_keys} != expected {output_names}")
+
+    coreml_to_keras = dict(zip(coreml_keys, output_names, strict=False))
 
     def _predict(x: np.ndarray):
-        return mlmodel.predict({input_name: x})[output_name]
+        y = mlmodel.predict({input_name: x})
+        return {coreml_to_keras[k]: y[k] for k in coreml_keys}
+
+    dummy = _dummy_input(1, plate_config.img_height, plate_config.img_width, plate_config.num_channels, np.float32)
 
     _validate_prediction(
         model,
         _predict,
-        _dummy_input(
-            1,
-            plate_config.img_height,
-            plate_config.img_width,
-            plate_config.num_channels,
-            np.float32,
-        ),
+        dummy,
         "CoreML",
+        output_names=output_names,
     )
+
     logging.info("Saved CoreML model to %s", out_file)
 
 
@@ -356,10 +390,7 @@ def export_coreml(
     type=click.Choice(["channels_last", "channels_first"], case_sensitive=False),
     default="channels_last",
     show_default=True,
-    help=(
-        "Data format of the input tensor. It can be either "
-        "'channels_last' (NHWC) or 'channels_first' (NCHW)."
-    ),
+    help="Data format of the input tensor. It can be either 'channels_last' (NHWC) or 'channels_first' (NCHW).",
 )
 def export(  # noqa: PLR0913
     model_path: pathlib.Path,
@@ -395,8 +426,7 @@ def export(  # noqa: PLR0913
         )
     elif export_format == "tflite":
         out_file = _make_output_path(model_path, save_dir, ".tflite")
-        # TFLite doesn't seem to support dynamic batch size
-        # See: https://ai.google.dev/edge/litert/inference#run-inference
+        # TODO: From Keras 3.13.0 we can use TFLite exporter directly in model.export(...)
         export_tflite(
             model=model,
             plate_config=plate_config,
