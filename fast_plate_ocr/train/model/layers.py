@@ -556,6 +556,9 @@ class SequencePooling(keras.layers.Layer):
         super().__init__(**kwargs)
         self.attention = keras.layers.Dense(1)
 
+    def build(self, input_shape):
+        super().build(input_shape)
+
     def call(self, x):
         attention_weights = keras.ops.softmax(self.attention(x), axis=1)
         attention_weights = keras.ops.transpose(attention_weights, axes=(0, 2, 1))
