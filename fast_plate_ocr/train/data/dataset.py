@@ -8,7 +8,6 @@ import warnings
 
 import albumentations as A
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
 from keras.src.trainers.data_adapters.py_dataset_adapter import PyDataset
 
@@ -81,7 +80,7 @@ class PlateRecognitionPyDataset(PyDataset):
     def __len__(self) -> int:
         return math.ceil(len(self.annotations) / self.batch_size)
 
-    def __getitem__(self, idx: int) -> tuple[npt.NDArray, dict[str, npt.NDArray]]:
+    def __getitem__(self, idx: int):
         # Determine the idx-es of current batch
         low = idx * self.batch_size
         high = min(low + self.batch_size, len(self.annotations))
