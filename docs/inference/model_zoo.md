@@ -1,6 +1,6 @@
 ## Model Zoo
 
-Optimized, ready to use models with config files for inference or fine-tuning.
+The Model Zoo lists released, ready-to-use models with configuration files for inference or fine-tuning.
 
 | Model Name                    | Size | Arch                                                                            | b=1 Avg. Latency (ms) | Plates/sec (PPS) | Model Config                                                                                                             | Plate Config                                                                                                             |
 |-------------------------------|------|---------------------------------------------------------------------------------|-----------------------|------------------|--------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|

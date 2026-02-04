@@ -21,6 +21,7 @@ Below is a summary of the supported fields in the YAML config:
 | `interpolation`     | `"cubic"`, `"linear"`, etc. | Resizing interpolation method                                        |
 | `image_color_mode`  | `"grayscale"` or `"rgb"`    | Color mode for input images                                          |
 | `padding_color`     | `int` or `(int, int, int)`  | Color used to pad the image if aspect ratio is preserved             |
+| `plate_regions`     | `list[str]` or `null`       | Optional region/country labels for region recognition                |
 
 ---
 
@@ -36,6 +37,7 @@ keep_aspect_ratio: true
 interpolation: linear  # (3)!
 image_color_mode: grayscale
 padding_color: 114  # (4)!
+plate_regions: ["USA", "Germany", "Unknown"]
 ```
 
 1. **All** the **possible character set** for the model output. **Must** include the **pad character**.

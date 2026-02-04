@@ -32,6 +32,16 @@ KERAS_BACKEND=tensorflow fast-plate-ocr train \
 
 ---
 
+## Region Recognition (Optional)
+
+Region recognition is enabled automatically when:
+
+1. Your CSV includes a `region` column.
+2. Your plate config defines `plate_regions`.
+
+When enabled, you can tune region loss and weighting via:
+`--region-loss`, `--region-loss-weight`, `--region-focal-alpha`, and `--region-focal-gamma`.
+
 ## Logging and Checkpoints
 
 The script saves:

@@ -46,7 +46,7 @@ tokenizer:
   patch_mlp:
     layer: MLP
     hidden_units: [64]
-    activation: gelu
+    activation: relu
     dropout_rate: 0.05
 
 transformer_encoder:
@@ -54,7 +54,7 @@ transformer_encoder:
   heads: 1
   projection_dim: 64
   units: [64, 64]
-  activation: gelu
+  activation: relu
   stochastic_depth: 0.05
   attention_dropout: 0.05
   mlp_dropout: 0.1
@@ -71,6 +71,9 @@ transformer_encoder:
 ???+ note "Note on plate/model configs"
     The [plate config](plate_config.md) is used throughout both **inference** and **training** scripts.
     In contrast, the **model config** (shown above) is **only used for training**, as it defines the architecture to be built.
+
+???+ tip
+    For export-friendly models, prefer `relu` activations.
 
 #### Building Custom Tokenizers with Any Keras Layer
 

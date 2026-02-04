@@ -53,6 +53,19 @@ plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
 plates, conf = plate_recognizer.run("test_plate.png", return_confidence=True)
 ```
 
+### Region prediction (optional)
+
+If the loaded model exports a **region** head and the plate config includes `plate_regions`, each prediction
+can also include a `region` label and `region_prob` (only when `return_confidence=True`):
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
+print(pred.plate, pred.region, pred.region_prob)
+```
+
 ### Benchmark the model
 
 ```python

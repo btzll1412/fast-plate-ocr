@@ -19,6 +19,7 @@ The idea is to use this after a plate object detector, since the OCR expects the
 - **Efficient Execution**: **Lightweight** models that are cheap to run 💰
 - **ONNX Runtime Inference**: **Fast** and **optimized** inference with **[ONNX runtime](https://onnxruntime.ai/)** ⚡
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
+- **Region Recognition (Optional)**: Predict **region/country** of the license plate 🌍
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
 - **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
@@ -51,6 +52,9 @@ print(m.run("test_plate.png"))
 ```
 
 For **more examples** and input formats (NumPy arrays, batches, etc.), see the [**Inference Guide**](inference/running_inference.md).
+
+If your model includes a **region head** and `plate_regions` is defined, predictions can include `region`
+and `region_prob` (when `return_confidence=True`).
 
 ### Use it with FastALPR
 

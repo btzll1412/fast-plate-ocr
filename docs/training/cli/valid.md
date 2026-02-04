@@ -21,6 +21,7 @@ fast-plate-ocr valid \
 - **Evaluation metrics** will be printed to the terminal (e.g., accuracy, loss).
 - The script automatically compiles the model using the metrics **defined during training**.
 - It **does not save new weights** or modify the model.
+- If the model includes a **region head**, region metrics like `region_acc` and `region_top3_acc` will also appear.
 
 ---
 

@@ -31,6 +31,7 @@ The idea is to use this after a plate object detector, since the OCR expects the
 - **Efficient Execution**: **Lightweight** models that are cheap to run 💰
 - **ONNX Runtime Inference**: **Fast** and **optimized** inference with **[ONNX runtime](https://onnxruntime.ai/)** ⚡
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
+- **Region Recognition (Optional)**: Predict **region/country** of the license plate 🌍
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
 - **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
@@ -88,6 +89,17 @@ m = LicensePlateRecognizer('cct-xs-v1-global-model')
 print(m.run('test_plate.png'))
 ```
 
+If your model includes a **region head** (and `plate_regions` is defined in the plate config), the prediction
+also includes `region` and `region_prob` when `return_confidence=True`:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+m = LicensePlateRecognizer('cct-xs-v1-global-model')
+pred = m.run('test_plate.png', return_confidence=True)[0]
+print(pred.region, pred.region_prob)
+```
+
 <details>
   <summary>Run demo</summary>
 
@@ -95,7 +107,7 @@ print(m.run('test_plate.png'))
 
 </details>
 
-To run model benchmark:
+To run a model benchmark:
 
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
@@ -129,6 +141,8 @@ preparing your dataset to training and exporting the model.
 
 For full details on data preparation, model configs, fine-tuning, and training commands, check out the
 [docs](https://ankandrew.github.io/fast-plate-ocr/1.0/training/intro/).
+
+For **region recognition** and export-friendly activations, use the v2 models.
 
 ## Contributing
 
