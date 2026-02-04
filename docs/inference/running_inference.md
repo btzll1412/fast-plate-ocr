@@ -50,7 +50,8 @@ res = plate_recognizer.run(imgs)
 from fast_plate_ocr import LicensePlateRecognizer
 
 plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
-plates, conf = plate_recognizer.run("test_plate.png", return_confidence=True)
+pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
+print(pred.plate, pred.char_probs)
 ```
 
 ### Region prediction (optional)
