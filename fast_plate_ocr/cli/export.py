@@ -225,11 +225,14 @@ def export_tflite(
         logging.info("Saved TFLite model to %s", out_file)
         return
 
+    from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
+
     output_names = _get_output_names(model)
 
     class _TFLiteRunner:
         def __init__(self, path: pathlib.Path, out_names: list[str]):
-            self.interp = tf.lite.Interpreter(model_path=str(path))
+            self.interp = LiteRTInterpreter(model_path=str(path))
+            self.interp.allocate_tensors()
             sigs = self.interp.get_signature_list()
             self.sig = next(iter(sigs))
             self.runner = self.interp.get_signature_runner(self.sig)

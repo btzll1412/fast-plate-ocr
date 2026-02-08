@@ -45,6 +45,7 @@ onnx-openvino = ["onnxruntime-openvino"]
 onnx-directml = ["onnxruntime-directml"]
 onnx-qnn = ["onnxruntime-qnn"]
 train = [
+    "ai-edge-litert",
     "albumentations",
     "click",
     "coremltools",
