@@ -22,8 +22,11 @@ from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 from test import MODEL_CONFIG_PATHS
 
-EXCLUDE_MODELS = ("cct_s_v1_relu", "cct_xs_v1_relu")
-"""Models to exclude from testing."""
+EXCLUDE_MODELS = ("cct_s_v1", "cct_xs_v1")
+"""
+Models to exclude from testing. Currently v1 models fail to be exported w/ 'gelu' with some lib versions, so excluding
+them here.
+"""
 MODEL_CONFIG_PATHS_TO_TEST = [m for m in MODEL_CONFIG_PATHS if m.stem not in EXCLUDE_MODELS]
 """Model configs to test."""
 
