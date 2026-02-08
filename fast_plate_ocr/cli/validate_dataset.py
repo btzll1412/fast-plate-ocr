@@ -32,7 +32,7 @@ def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
         return False, None
 
 
-def _validate_dataset(
+def run_dataset_validation(
     df: pd.DataFrame,
     cfg,
     min_h: int,
@@ -202,7 +202,7 @@ def validate_dataset(
     csv_root = annotations_file.parent
     df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
 
-    errors, warnings, cleaned = _validate_dataset(df_annots, cfg, min_height, min_width)
+    errors, warnings, cleaned = run_dataset_validation(df_annots, cfg, min_height, min_width)
 
     # Make cleaned dataset img_path relative (expected format)
     cleaned["image_path"] = cleaned["image_path"].apply(lambda p: str(Path(p).relative_to(csv_root)))

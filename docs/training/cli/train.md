@@ -42,6 +42,23 @@ Region recognition is enabled automatically when:
 When enabled, you can tune region loss and weighting via:
 `--region-loss`, `--region-loss-weight`, `--region-focal-alpha`, and `--region-focal-gamma`.
 
+## Dataset Validation (Optional)
+
+You can pre-validate train and val CSVs before training to catch missing images, corrupt files,
+invalid chars, and length issues:
+
+```shell
+fast-plate-ocr train \
+  --model-config-file models/cct_s_v2.yaml \
+  --plate-config-file config/latin_plates.yaml \
+  --annotations data/train.csv \
+  --val-annotations data/val.csv \
+  --validate-dataset warn
+```
+
+Use `--validate-dataset error` to abort on errors, or adjust size thresholds with
+`--validate-min-height` and `--validate-min-width`.
+
 ## Logging and Checkpoints
 
 The script saves:

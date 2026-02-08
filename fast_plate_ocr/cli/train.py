@@ -11,6 +11,7 @@ from typing import Literal
 import albumentations as A
 import click
 import keras
+import pandas as pd
 from keras.src.callbacks import (
     CSVLogger,
     EarlyStopping,
@@ -22,6 +23,7 @@ from keras.src.callbacks import (
 from keras.src.optimizers import AdamW
 
 from fast_plate_ocr.cli.utils import print_params, print_train_details
+from fast_plate_ocr.cli.validate_dataset import console, rich_report, run_dataset_validation
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
 )
@@ -38,7 +40,8 @@ from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 # ruff: noqa: PLR0913
-# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments, too-many-branches
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
+# pylint: disable=too-many-branches, too-many-statements
 
 
 EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
@@ -53,6 +56,9 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     "val_region_loss": "min",
 }
 """Eval metric to monitor."""
+
+ValidationMode = Literal["off", "warn", "error"]
+"""Validation mode to use when training."""
 
 
 def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -> str:
@@ -79,6 +85,33 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     return requested_metric
 
 
+def validate_datasets_before_training(
+    plate_config,
+    annotations: pathlib.Path,
+    val_annotations: pathlib.Path,
+    mode: ValidationMode,
+    min_height: int,
+    min_width: int,
+) -> None:
+    if mode == "off":
+        return
+
+    def validate_one(label: str, csv_path: pathlib.Path) -> bool:
+        df_annots = pd.read_csv(csv_path)
+        csv_root = csv_path.parent
+        df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
+        errors, warnings, _ = run_dataset_validation(df_annots, plate_config, min_height, min_width)
+        console.print(f"\n[bold]Dataset validation ({label})[/]")
+        rich_report(errors, warnings)
+        return bool(errors)
+
+    train_has_errors = validate_one("train", annotations)
+    val_has_errors = validate_one("val", val_annotations)
+
+    if (train_has_errors or val_has_errors) and mode == "error":
+        raise ValueError("Dataset validation failed. Fix errors or use --validate-dataset=warn to proceed.")
+
+
 @click.command(context_settings={"max_content_width": 120})
 @click.option(
     "--model-config-file",
@@ -103,6 +136,27 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     required=True,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
     help="Path pointing to the train validation CSV file.",
+)
+@click.option(
+    "--validate-dataset",
+    default="off",
+    show_default=True,
+    type=click.Choice(["off", "warn", "error"], case_sensitive=False),
+    help="Validate train/val CSVs before training. 'warn' prints issues, 'error' aborts on errors.",
+)
+@click.option(
+    "--validate-min-height",
+    default=2,
+    show_default=True,
+    type=int,
+    help="Minimum allowed image height when validating datasets.",
+)
+@click.option(
+    "--validate-min-width",
+    default=2,
+    show_default=True,
+    type=int,
+    help="Minimum allowed image width when validating datasets.",
 )
 @click.option(
     "--validation-freq",
@@ -324,6 +378,9 @@ def train(  # noqa: PLR0912, PLR0915
     plate_config_file: pathlib.Path,
     annotations: pathlib.Path,
     val_annotations: pathlib.Path,
+    validate_dataset: ValidationMode,
+    validate_min_height: int,
+    validate_min_width: int,
     validation_freq: int,
     augmentation_path: pathlib.Path | None,
     lr: float,
@@ -367,6 +424,15 @@ def train(  # noqa: PLR0912, PLR0915
 
     plate_config = load_plate_config_from_yaml(plate_config_file)
     model_config = load_model_config_from_yaml(model_config_file)
+
+    validate_datasets_before_training(
+        plate_config=plate_config,
+        annotations=annotations,
+        val_annotations=val_annotations,
+        mode=validate_dataset,
+        min_height=validate_min_height,
+        min_width=validate_min_width,
+    )
     train_augmentation = (
         A.load(augmentation_path, data_format="yaml")
         if augmentation_path
