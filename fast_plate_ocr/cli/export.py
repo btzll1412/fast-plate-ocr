@@ -431,6 +431,7 @@ def export(  # noqa: PLR0913
             model=model,
             plate_config=plate_config,
             out_file=out_file,
+            skip_validation=skip_validation,
         )
     elif export_format == "coreml":
         out_file = _make_output_path(model_path, save_dir, ".mlpackage")
