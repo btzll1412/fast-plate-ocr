@@ -8,10 +8,10 @@ import warnings
 
 import albumentations as A
 import numpy as np
-import pandas as pd
 from keras.src.trainers.data_adapters.py_dataset_adapter import PyDataset
 
 from fast_plate_ocr.core.process import read_and_resize_plate_image
+from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.model.config import PlateConfig
 from fast_plate_ocr.train.utilities import utils
 
@@ -32,7 +32,7 @@ class PlateRecognitionPyDataset(PyDataset):
     ) -> None:
         super().__init__(**kwargs)
         # Load annotations
-        annotations = pd.read_csv(annotations_file, dtype={"plate_text": str})
+        annotations = read_annotations_csv(annotations_file)
         annotations["image_path"] = (
             os.path.dirname(os.path.realpath(annotations_file)) + os.sep + annotations["image_path"]
         )

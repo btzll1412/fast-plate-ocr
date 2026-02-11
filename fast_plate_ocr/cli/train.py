@@ -11,7 +11,6 @@ from typing import Literal
 import albumentations as A
 import click
 import keras
-import pandas as pd
 from keras.src.callbacks import (
     CSVLogger,
     EarlyStopping,
@@ -24,6 +23,7 @@ from keras.src.optimizers import AdamW
 
 from fast_plate_ocr.cli.utils import print_params, print_train_details
 from fast_plate_ocr.cli.validate_dataset import console, rich_report, run_dataset_validation
+from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
 )
@@ -97,7 +97,7 @@ def validate_datasets_before_training(
         return
 
     def validate_one(label: str, csv_path: pathlib.Path) -> bool:
-        df_annots = pd.read_csv(csv_path)
+        df_annots = read_annotations_csv(csv_path)
         csv_root = csv_path.parent
         df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
         errors, warnings, _ = run_dataset_validation(df_annots, plate_config, min_height, min_width)

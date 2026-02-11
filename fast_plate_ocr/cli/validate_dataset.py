@@ -15,6 +15,7 @@ from rich.markup import escape
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn
 from rich.table import Table
 
+from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.model.config import load_plate_config_from_yaml
 
 # pylint: disable=too-many-locals
@@ -198,7 +199,7 @@ def validate_dataset(
     """
     cfg = load_plate_config_from_yaml(plate_config_file)
 
-    df_annots = pd.read_csv(annotations_file)
+    df_annots = read_annotations_csv(annotations_file)
     csv_root = annotations_file.parent
     df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
 
