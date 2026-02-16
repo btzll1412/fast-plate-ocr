@@ -15,6 +15,8 @@ The validator performs the following:
 - **Resizing feasibility**: Ensures images won't be resized below 1 pixel.
 - **Text length**: Verifies plate text length are less or equal than `max_plate_slots`.
 - **Alphabet coverage**: Ensures all characters are inside the allowed `alphabet`.
+- **Region labels**: If region recognition is enabled (`region` column + `plate_regions`), validates missing/unknown regions.
+- **Region config mismatch**: Warns if CSV has `region` but `plate_regions` is not configured.
 - **Duplicate entries**: Warns about repeated image paths.
 - **Unused characters**: Identifies characters in your `alphabet` that are not used at all.
 

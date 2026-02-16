@@ -5,6 +5,7 @@ Validate a `fast-plate-ocr` dataset before training.
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 import click
 import pandas as pd
@@ -33,7 +34,32 @@ def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
         return False, None
 
 
-def run_dataset_validation(
+def get_region_validation_state(df: pd.DataFrame, cfg, warnings: list[tuple[str, str]]) -> tuple[bool, set[str]]:
+    has_region_col = "region" in df.columns
+    regions_defined = cfg.has_region_recognition
+    region_recognition = has_region_col and regions_defined
+
+    if has_region_col and not regions_defined:
+        warnings.append(
+            (
+                "-",
+                "Region column found in annotations, but plate_config.plate_regions is None or empty. "
+                "Region labels will be ignored.",
+            )
+        )
+
+    return region_recognition, set(cfg.plate_regions or [])
+
+
+def validate_region_value(region: Any, allowed_regions: set[str], img_path: Path) -> str | None:
+    if pd.isna(region):
+        return f"Missing region value in row [{img_path}]"
+    if region not in allowed_regions:
+        return f"Invalid region label '{region}' not present in config.plate_regions [{img_path}]"
+    return None
+
+
+def run_dataset_validation(  # noqa: PLR0915
     df: pd.DataFrame,
     cfg,
     min_h: int,
@@ -42,9 +68,12 @@ def run_dataset_validation(
     """
     Iterate over the dataframe, collect errors and warnings, and return a cleaned df.
     """
-    errors, warnings, ok_rows = [], [], []
+    errors: list[tuple[str, str]] = []
+    warnings: list[tuple[str, str]] = []
+    ok_rows: list[tuple[Any, ...]] = []
     char_counter: Counter[str] = Counter()
     seen_paths: set[Path] = set()
+    region_recognition, allowed_regions = get_region_validation_state(df, cfg, warnings)
 
     progress = Progress(
         SpinnerColumn(),
@@ -104,6 +133,14 @@ def run_dataset_validation(
                 errors.append((line_no, f"Invalid chars {bad_chars} in plate '{plate}' [{img_path}]"))
                 progress.update(task, advance=1)
                 continue
+
+            # Check region labels if region recognition is enabled
+            if region_recognition:
+                region_error = validate_region_value(row.region, allowed_regions, img_path)
+                if region_error:
+                    errors.append((line_no, region_error))
+                    progress.update(task, advance=1)
+                    continue
 
             # Check duplicate paths
             if img_path in seen_paths:
