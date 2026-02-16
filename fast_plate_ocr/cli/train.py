@@ -56,7 +56,6 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     "val_region_loss": "min",
 }
 """Eval metric to monitor."""
-
 ValidationMode = Literal["off", "warn", "error"]
 """Validation mode to use when training."""
 

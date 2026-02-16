@@ -24,7 +24,7 @@ During training, you will see the following metrics:
 
 ## Region Metrics (When Enabled)
 
-If your dataset includes a `region` column and the plate config defines `plate_regions`, training enables a region head
+If your dataset includes a `plate_region` column and the plate config defines `plate_regions`, training enables a region head
 and logs:
 
 * **region_acc**: Categorical accuracy for region classification.

@@ -48,14 +48,14 @@ class PlateRecognitionPyDataset(PyDataset):
         self.shuffle = shuffle
 
         # Region recognition support is active only if both config and column exist
-        has_region_col = "region" in self.annotations.columns
+        has_plate_region_col = "plate_region" in self.annotations.columns
         regions_defined = self.plate_config.has_region_recognition
-        self.region_recognition = has_region_col and regions_defined
+        self.region_recognition = has_plate_region_col and regions_defined
 
-        if has_region_col and not regions_defined:
+        if has_plate_region_col and not regions_defined:
             warnings.warn(
-                "Region column found in annotations, but plate_config.plate_regions "
-                "is None or empty. Region labels will be ignored.",
+                "plate_region column found in annotations, but plate_config.plate_regions "
+                "is None or empty. plate_region labels will be ignored.",
                 stacklevel=2,
             )
 
@@ -64,10 +64,10 @@ class PlateRecognitionPyDataset(PyDataset):
             if not self.plate_config.plate_regions:
                 raise ValueError("plate_regions must be defined and non-empty when region recognition is enabled.")
             # Validate there are no missing values
-            if self.annotations["region"].isna().any():
-                raise ValueError("Found NaN values in 'region' column.")
+            if self.annotations["plate_region"].isna().any():
+                raise ValueError("Found NaN values in 'plate_region' column.")
             # Validate regions present in CSV against config
-            missing = set(self.annotations["region"].unique()) - set(self.plate_config.plate_regions)
+            missing = set(self.annotations["plate_region"].unique()) - set(self.plate_config.plate_regions)
             if missing:
                 raise ValueError(f"Found region labels in CSV not present in config.plate_regions: {sorted(missing)}")
             self.region_to_idx = {c: i for i, c in enumerate(self.plate_config.plate_regions)}
@@ -88,7 +88,7 @@ class PlateRecognitionPyDataset(PyDataset):
 
         batch_x, batch_y_plate = [], []
         region_idx = (
-            batch_df["region"].map(self.region_to_idx).to_numpy(dtype=np.int32, copy=False)
+            batch_df["plate_region"].map(self.region_to_idx).to_numpy(dtype=np.int32, copy=False)
             if self.region_recognition
             else None
         )

@@ -39,7 +39,7 @@ def _write_annotations(
 ) -> pathlib.Path:
     data = {"image_path": rel_paths, "plate_text": plate_texts}
     if regions is not None:
-        data["region"] = regions
+        data["plate_region"] = regions
     df = pd.DataFrame(data)
     csv_path = root / "annotations.csv"
     df.to_csv(csv_path, index=False)

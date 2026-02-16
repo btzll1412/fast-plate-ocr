@@ -35,7 +35,7 @@ def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
 
 
 def get_region_validation_state(df: pd.DataFrame, cfg, warnings: list[tuple[str, str]]) -> tuple[bool, set[str]]:
-    has_region_col = "region" in df.columns
+    has_region_col = "plate_region" in df.columns
     regions_defined = cfg.has_region_recognition
     region_recognition = has_region_col and regions_defined
 
@@ -43,8 +43,8 @@ def get_region_validation_state(df: pd.DataFrame, cfg, warnings: list[tuple[str,
         warnings.append(
             (
                 "-",
-                "Region column found in annotations, but plate_config.plate_regions is None or empty. "
-                "Region labels will be ignored.",
+                "plate_region column found in annotations, but plate_config.plate_regions is None or empty. "
+                "plate_region labels will be ignored.",
             )
         )
 
@@ -136,7 +136,7 @@ def run_dataset_validation(  # noqa: PLR0915
 
             # Check region labels if region recognition is enabled
             if region_recognition:
-                region_error = validate_region_value(row.region, allowed_regions, img_path)
+                region_error = validate_region_value(row.plate_region, allowed_regions, img_path)
                 if region_error:
                     errors.append((line_no, region_error))
                     progress.update(task, advance=1)
@@ -191,7 +191,7 @@ def rich_report(errors, warnings):
     "-a",
     required=True,
     type=click.Path(exists=True, dir_okay=False, file_okay=True, path_type=Path, resolve_path=True),
-    help="CSV with image_path and plate_text columns.",
+    help="CSV with image_path, plate_text, and optional plate_region columns.",
 )
 @click.option(
     "--plate-config-file",

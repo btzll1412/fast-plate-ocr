@@ -7,7 +7,7 @@ import warnings
 
 import pandas as pd
 
-ALLOWED_COLUMNS = {"image_path", "plate_text", "region"}
+ALLOWED_COLUMNS = {"image_path", "plate_text", "plate_region"}
 """Allowed columns in annotations CSVs."""
 
 
