@@ -53,6 +53,7 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     "val_plate_loss": "min",
     "val_region_acc": "max",
     "val_region_top3_acc": "max",
+    "val_region_macro_f1": "max",
     "val_region_loss": "min",
 }
 """Eval metric to monitor."""
@@ -71,6 +72,7 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     region_metrics = {
         "val_region_acc",
         "val_region_top3_acc",
+        "val_region_macro_f1",
         "val_region_loss",
     }
 
@@ -539,6 +541,7 @@ def train(  # noqa: PLR0912, PLR0915
             "region": [
                 keras.metrics.CategoricalAccuracy(name="acc"),
                 keras.metrics.TopKCategoricalAccuracy(k=3, name="top3_acc"),
+                keras.metrics.F1Score(average="macro", name="macro_f1"),
             ],
         }
     else:

@@ -29,6 +29,7 @@ and logs:
 
 * **region_acc**: Categorical accuracy for region classification.
 * **region_top3_acc**: Top-3 categorical accuracy for region classification.
+* **region_macro_f1**: Macro-averaged F1 across all region classes.
 
 ## Example Cases
 
