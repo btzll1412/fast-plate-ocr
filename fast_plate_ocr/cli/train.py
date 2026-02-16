@@ -65,9 +65,9 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
     """
     Map a logical early-stopping metric name to the actual logs key.
 
-    Since we always compile metrics under the 'plate' head, single- and multi-head
-    runs both emit 'val_plate_*' keys. The only thing we need to guard against is
-    asking for region metrics when there is no region head.
+    :param requested_metric: Logical metric name.
+    :param has_region_head: Whether the dataset has a region head.
+    :return: Actual metric key logged.
     """
     region_metrics = {
         "val_region_acc",
@@ -81,7 +81,16 @@ def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -
             "but the dataset/model does not have a region head."
         )
 
-    # No remapping needed anymore; the logs always use 'plate_*' names.
+    if not has_region_head:
+        single_head_metric_map = {
+            "val_plate_acc": "val_acc",
+            "val_plate_char_acc": "val_char_acc",
+            "val_plate_top3_acc": "val_top3_acc",
+            "val_plate_len_acc": "val_len_acc",
+            "val_plate_loss": "val_loss",
+        }
+        return single_head_metric_map.get(requested_metric, requested_metric)
+
     return requested_metric
 
 
