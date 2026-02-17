@@ -270,7 +270,7 @@ def postprocess_output(
     region_probs: np.ndarray | None = None
     if return_region:
         if region_output is None or region_labels is None:
-            raise ValueError("Country predictions requested but required outputs are missing.")
+            raise ValueError("Region predictions requested but required outputs are missing.")
         region_indices = np.argmax(region_output, axis=-1)
         regions = [region_labels[idx] for idx in region_indices]
         if return_confidence:
