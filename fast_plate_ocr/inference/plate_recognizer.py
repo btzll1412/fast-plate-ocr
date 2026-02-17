@@ -294,6 +294,7 @@ class LicensePlateRecognizer:
         self,
         source: str | list[str] | npt.NDArray | list[npt.NDArray],
         return_confidence: bool = False,
+        remove_pad_char: bool = True,
     ) -> list[PlatePrediction]:
         """
         Run plate recognition on one or more images.
@@ -312,6 +313,8 @@ class LicensePlateRecognizer:
 
             return_confidence: If ``True``, include per-character confidence scores in each prediction
                 (`PlatePrediction.char_probs`).
+            remove_pad_char: If ``True`` (default), remove trailing configured padding characters
+                from decoded plate text.
 
         Returns:
             A list of `PlatePrediction`, one per input image (or batch element).
@@ -335,6 +338,8 @@ class LicensePlateRecognizer:
             model_output=outputs[self.plate_output_name],
             max_plate_slots=self.config.max_plate_slots,
             model_alphabet=self.config.alphabet,
+            pad_char=self.config.pad_char,
+            remove_pad_char=remove_pad_char,
             return_confidence=return_confidence,
             return_region=self.has_region_head,
             region_output=(
@@ -349,6 +354,7 @@ class LicensePlateRecognizer:
         self,
         source: str | npt.NDArray,
         return_confidence: bool = False,
+        remove_pad_char: bool = True,
     ) -> PlatePrediction:
         """
         Convenience wrapper around `run()` for single-image inference.
@@ -356,6 +362,8 @@ class LicensePlateRecognizer:
         Args:
             source: A single image input (path or NumPy array).
             return_confidence: Whether to include per-character confidences.
+            remove_pad_char: Whether to remove trailing configured padding characters from decoded
+                plate text.
 
         Returns:
             A single `PlatePrediction`. Region fields are populated automatically when supported.
@@ -363,7 +371,7 @@ class LicensePlateRecognizer:
         Raises:
             ValueError: If the input resolves to anything other than exactly one sample.
         """
-        results = self.run(source, return_confidence=return_confidence)
+        results = self.run(source, return_confidence=return_confidence, remove_pad_char=remove_pad_char)
         if len(results) != 1:
             raise ValueError(f"Expected exactly 1 result, got {len(results)}.")
         return results[0]

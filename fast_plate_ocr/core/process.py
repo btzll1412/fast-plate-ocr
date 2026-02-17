@@ -212,6 +212,8 @@ def postprocess_output(
     model_output: np.ndarray,
     max_plate_slots: int,
     model_alphabet: str,
+    pad_char: str | None = None,
+    remove_pad_char: bool = True,
     return_confidence: bool = False,
     return_region: bool = False,
     region_output: np.ndarray | None = None,
@@ -229,6 +231,9 @@ def postprocess_output(
             ``(N, max_plate_slots, vocab_size)``.
         max_plate_slots: Maximum number of character positions predicted by the model.
         model_alphabet: Alphabet used by the model; index positions correspond to model classes.
+        pad_char: Padding character used during training/inference config. When provided and
+            ``remove_pad_char=True``, trailing padding characters are removed from decoded plates.
+        remove_pad_char: If ``True``, remove trailing ``pad_char`` from decoded plates.
         return_confidence: If ``True``, include per-character confidences in each prediction.
         return_region: If ``True``, include region predictions in each prediction. Requires
             ``region_output`` and ``region_labels``.
@@ -254,6 +259,8 @@ def postprocess_output(
     alphabet_array = np.array(list(model_alphabet))
     plate_chars = alphabet_array[prediction_indices]
     plates: list[str] = np.apply_along_axis("".join, 1, plate_chars).tolist()
+    if remove_pad_char and pad_char is not None:
+        plates = [plate.rstrip(pad_char) for plate in plates]
 
     char_probs: np.ndarray | None = None
     if return_confidence:
