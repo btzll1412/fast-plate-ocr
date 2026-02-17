@@ -136,7 +136,7 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.pylint]
-max-args = 8
+max-args = 9
 
 [tool.ruff.format]
 line-ending = "lf"
@@ -166,7 +166,7 @@ max-line-length = 120
 disable = ["missing-class-docstring", "missing-function-docstring", "wrong-import-order", "duplicate-code"]
 
 [tool.pylint.design]
-max-args = 8
+max-args = 9
 min-public-methods = 1
 max-positional-arguments = 10
 max-locals = 20
