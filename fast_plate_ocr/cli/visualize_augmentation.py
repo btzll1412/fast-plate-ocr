@@ -78,7 +78,6 @@ def display_images(
         plt.show()
 
 
-# ruff: noqa: PLR0913
 # pylint: disable=too-many-arguments,too-many-locals
 
 

@@ -130,7 +130,7 @@ def _prepare_model_for_onnx_export(
 
 
 @requires("onnx", "onnxruntime", "onnxslim")
-def export_onnx(  # noqa: PLR0913
+def export_onnx(
     model: keras.Model,
     plate_config: PlateConfig,
     out_file: pathlib.Path,
