@@ -2,6 +2,7 @@
 Script for validating trained OCR models.
 """
 
+import json
 import pathlib
 
 import click
@@ -9,6 +10,27 @@ import click
 from fast_plate_ocr.train.data.dataset import PlateRecognitionPyDataset
 from fast_plate_ocr.train.model.config import load_plate_config_from_yaml
 from fast_plate_ocr.train.utilities.utils import load_keras_model
+
+
+def evaluate_model_by_region(model, val_dataset: PlateRecognitionPyDataset) -> dict[str, dict[str, float | int]]:
+    """
+    Evaluate metrics grouped by `plate_region`.
+    """
+    region_metrics: dict[str, dict[str, float | int]] = {}
+    original_annotations = val_dataset.annotations
+
+    try:
+        for region, group in original_annotations.groupby("plate_region", sort=True):
+            val_dataset.annotations = group.reset_index(drop=True)
+            metrics = model.evaluate(val_dataset, return_dict=True, verbose=0)
+            region_metrics[str(region)] = {
+                "num_samples": len(group),
+                **{name: float(value) for name, value in metrics.items()},
+            }
+    finally:
+        val_dataset.annotations = original_annotations
+
+    return region_metrics
 
 
 @click.command(context_settings={"max_content_width": 120})
@@ -61,6 +83,21 @@ from fast_plate_ocr.train.utilities.utils import load_keras_model
     type=int,
     help="Maximum number of batches to prefetch for the dataset.",
 )
+@click.option(
+    "--evaluate-by-region/--no-evaluate-by-region",
+    default=False,
+    show_default=True,
+    help=(
+        "If enabled, also evaluate each `plate_region` group separately. "
+        "Requires region recognition (`plate_region` column and `plate_config.plate_regions`)."
+    ),
+)
+@click.option(
+    "--region-metrics-output",
+    type=click.Path(dir_okay=False, path_type=pathlib.Path),
+    default=None,
+    help="Optional output path to save per-region metrics as JSON. Requires `--evaluate-by-region`.",
+)
 def valid(
     model_path: pathlib.Path,
     plate_config_file: pathlib.Path,
@@ -69,6 +106,8 @@ def valid(
     workers: int,
     use_multiprocessing: bool,
     max_queue_size: int,
+    evaluate_by_region: bool,
+    region_metrics_output: pathlib.Path | None,
 ) -> None:
     """
     Validate the trained OCR model on a labeled set.
@@ -84,7 +123,27 @@ def valid(
         use_multiprocessing=use_multiprocessing,
         max_queue_size=max_queue_size,
     )
+
+    if evaluate_by_region and not val_dataset.region_recognition:
+        raise click.UsageError(
+            "`--evaluate-by-region` requires region recognition. "
+            "Make sure annotations include `plate_region` and the config defines `plate_regions`."
+        )
+    if region_metrics_output is not None and not evaluate_by_region:
+        raise click.UsageError("`--region-metrics-output` requires `--evaluate-by-region`.")
+
     model.evaluate(val_dataset)
+
+    if evaluate_by_region:
+        region_metrics = evaluate_model_by_region(model=model, val_dataset=val_dataset)
+        if region_metrics_output is not None:
+            region_metrics_output.parent.mkdir(parents=True, exist_ok=True)
+            with open(region_metrics_output, "w", encoding="utf-8") as f_out:
+                json.dump(region_metrics, f_out, indent=2, sort_keys=True)
+            click.echo(f"\nPer-region metrics saved to: {region_metrics_output}")
+        else:
+            click.echo("\nPer-region metrics:")
+            click.echo(json.dumps(region_metrics, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
