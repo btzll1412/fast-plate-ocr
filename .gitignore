@@ -176,3 +176,47 @@ Desktop.ini
 
 # Notebooks
 **/.ipynb_checkpoints/
+
+# Trained models
+**/trained_models/
+
+# Model artifacts
+*.keras
+*.h5
+*.hdf5
+*.weights.h5
+
+# TensorFlow ckpts
+checkpoint
+*.ckpt
+*.ckpt.*
+*.index
+*.data-*
+
+# TF SavedModel
+saved_model/
+**/saved_model/
+**/saved_model.pb
+**/variables/
+
+# Training outputs / logs
+logs/
+**/logs/
+runs/
+tb_logs/
+tensorboard/
+
+# ONNX related
+*.onnx
+*.ort
+
+# Other Export formats
+*.tflite
+*.mlmodel
+*.mlpackage
+
+# Accelerator caches/artifacts
+*.engine
+*.plan
+trt_engine_cache/
+tensorrt/
