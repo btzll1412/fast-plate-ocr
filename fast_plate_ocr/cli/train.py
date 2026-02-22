@@ -546,7 +546,7 @@ def train(  # noqa: PLR0912, PLR0915
         }
     else:
         loss_config = {"plate": plate_loss_fn}
-        loss_weights = {"plate": plate_loss_weight}
+        loss_weights = None
         metrics_config = {"plate": base_metrics}
 
     model.compile(
