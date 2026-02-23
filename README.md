@@ -27,7 +27,6 @@ The idea is to use this after a plate object detector, since the OCR expects the
 ## Features
 
 - **Keras 3 Backend Support**: Train seamlessly using **[TensorFlow](https://www.tensorflow.org/)**, **[JAX](https://github.com/google/jax)**, or **[PyTorch](https://pytorch.org/)** backends 🧠
-- **Augmentation Variety**: Diverse **training-time augmentations** via **[Albumentations](https://albumentations.ai/)** library 🖼️
 - **Efficient Execution**: **Lightweight** models that are cheap to run 💰
 - **ONNX Runtime Inference**: **Fast** and **optimized** inference with **[ONNX runtime](https://onnxruntime.ai/)** ⚡
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
