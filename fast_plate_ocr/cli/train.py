@@ -323,7 +323,7 @@ def validate_datasets_before_training(
 )
 @click.option(
     "--epochs",
-    default=300,
+    default=150,
     show_default=True,
     type=int,
     help="Number of training epochs.",
