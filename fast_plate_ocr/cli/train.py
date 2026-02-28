@@ -204,7 +204,7 @@ def validate_datasets_before_training(
 )
 @click.option(
     "--weight-decay",
-    default=0.001,
+    default=0.01,
     show_default=True,
     type=float,
     help="Weight decay for the AdamW optimizer.",
