@@ -253,6 +253,12 @@ def build_norm_layer(norm_type) -> keras.layers.Layer:
     raise ValueError(f"Unknown norm_type {norm_type}")
 
 
+def _validate_attention_dims(projection_dim: int, num_heads: int) -> int:
+    if projection_dim % num_heads != 0:
+        raise ValueError(f"`projection_dim` ({projection_dim}) must be divisible by `num_heads` ({num_heads}).")
+    return projection_dim // num_heads
+
+
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
 class PositionEmbedding(keras.layers.Layer):
     def __init__(
@@ -308,12 +314,32 @@ class PositionEmbedding(keras.layers.Layer):
 
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
 class TokenReducer(keras.layers.Layer):
-    def __init__(self, num_tokens, projection_dim, num_heads=2, **kwargs):
+    def __init__(
+        self,
+        num_tokens,
+        projection_dim,
+        num_heads=2,
+        attention_dropout: float = 0.0,
+        use_query_residual: bool = True,
+        use_output_norm: bool = True,
+        norm_type: str = "layer_norm",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.num_tokens = num_tokens
         self.projection_dim = projection_dim
         self.num_heads = num_heads
-        self.attn = keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=projection_dim)
+        self.attention_dropout = attention_dropout
+        self.use_query_residual = use_query_residual
+        self.use_output_norm = use_output_norm
+        self.norm_type = norm_type
+        self.attn_head_dim = _validate_attention_dims(projection_dim, num_heads)
+        self.attn = keras.layers.MultiHeadAttention(
+            num_heads=num_heads,
+            key_dim=self.attn_head_dim,
+            dropout=attention_dropout,
+        )
+        self.output_norm = build_norm_layer(norm_type) if self.use_output_norm else None
 
     def build(self, input_shape):
         self.query_tokens = self.add_weight(
@@ -330,12 +356,14 @@ class TokenReducer(keras.layers.Layer):
             query_shape=(1, self.num_tokens, self.projection_dim),
             value_shape=(1, seq_length, self.projection_dim),
         )
+        if self.output_norm is not None:
+            self.output_norm.build((1, self.num_tokens, self.projection_dim))
         super().build(input_shape)
 
     def compute_output_shape(self, input_shape):
         return input_shape[0], self.num_tokens, self.projection_dim
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         """
         inputs: Tensor of shape (batch_size, seq_length, projection_dim)
         returns: Tensor of shape (batch_size, num_tokens, projection_dim)
@@ -345,7 +373,16 @@ class TokenReducer(keras.layers.Layer):
         query_tokens = keras.ops.tile(self.query_tokens, [batch_size, 1, 1])
         # Perform cross-attention where the queries are the learned tokens and keys/values are the
         # input tokens.
-        reduced_tokens = self.attn(query=query_tokens, key=inputs, value=inputs)
+        reduced_tokens = self.attn(
+            query=query_tokens,
+            key=inputs,
+            value=inputs,
+            training=training,
+        )
+        if self.use_query_residual:
+            reduced_tokens = reduced_tokens + query_tokens
+        if self.output_norm is not None:
+            reduced_tokens = self.output_norm(reduced_tokens)
         return reduced_tokens
 
     def get_config(self):
@@ -355,6 +392,10 @@ class TokenReducer(keras.layers.Layer):
                 "num_tokens": self.num_tokens,
                 "projection_dim": self.projection_dim,
                 "num_heads": self.num_heads,
+                "attention_dropout": self.attention_dropout,
+                "use_query_residual": self.use_query_residual,
+                "use_output_norm": self.use_output_norm,
+                "norm_type": self.norm_type,
             }
         )
         return cfg
@@ -466,10 +507,13 @@ class TransformerBlock(keras.layers.Layer):
         super().__init__(**kwargs)
         self.norm_type = norm_type
         self.activation = activation
+        self.projection_dim = projection_dim
+        self.num_heads = num_heads
 
         self.norm1 = build_norm_layer(norm_type)
+        attn_head_dim = _validate_attention_dims(projection_dim, num_heads)
         self.attn = keras.layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=projection_dim, dropout=attention_dropout
+            num_heads=num_heads, key_dim=attn_head_dim, dropout=attention_dropout
         )
         self.drop1 = StochasticDepth(drop_path_rate)
         self.norm2 = build_norm_layer(norm_type)
@@ -482,7 +526,7 @@ class TransformerBlock(keras.layers.Layer):
     def call(self, x, training=None):
         # 1. MHA + residual
         y = self.norm1(x)
-        y = self.attn(y, y)
+        y = self.attn(y, y, training=training)
         y = self.drop1(y, training=training)
         x = keras.layers.Add()([x, y])
 
@@ -496,8 +540,8 @@ class TransformerBlock(keras.layers.Layer):
         cfg = super().get_config()
         cfg.update(
             {
-                "projection_dim": self.attn.key_dim,
-                "num_heads": self.attn.num_heads,
+                "projection_dim": self.projection_dim,
+                "num_heads": self.num_heads,
                 "mlp_units": self.mlp.hidden_units,
                 "mlp_dropout": self.mlp.dropout_rate,
                 "attention_dropout": self.attn.dropout,
