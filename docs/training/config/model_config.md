@@ -75,6 +75,12 @@ transformer_encoder:
 ???+ tip
     For export-friendly models, prefer `relu` activations.
 
+???+ note "Attention Layout"
+    `attention_layout` controls how `projection_dim` is interpreted inside multi-head attention.
+
+    - `split_projection` (recommended): split `projection_dim` across attention heads, so each head uses `projection_dim / num_heads`.
+    - `legacy_per_head`: each head uses the full `projection_dim`. This mode is kept for backward compatibility with older models.
+
 #### Building Custom Tokenizers with Any Keras Layer
 
 You can define your own tokenizer stacks by composing **any supported layer** like `Conv2D`, `DepthwiseConv2D`, `SqueezeExcite`, and many more directly in YAML, without writing any code.

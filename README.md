@@ -88,8 +88,8 @@ m = LicensePlateRecognizer('cct-xs-v1-global-model')
 print(m.run('test_plate.png'))
 ```
 
-If your model includes a **region head** (and `plate_regions` is defined in the plate config), the prediction
-also includes `region` and `region_prob` when `return_confidence=True`:
+If your model includes a **region head** (and `plate_regions` is defined in the plate config), predictions
+also include `region`. The `region_prob` field is populated when `return_confidence=True`:
 
 ```python
 from fast_plate_ocr import LicensePlateRecognizer

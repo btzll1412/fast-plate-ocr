@@ -57,7 +57,7 @@ print(pred.plate, pred.char_probs)
 ### Region prediction (optional)
 
 If the loaded model exports a **region** head and the plate config includes `plate_regions`, each prediction
-can also include a `region` label and `region_prob` (only when `return_confidence=True`):
+includes a `region` label. The `region_prob` field is also populated when `return_confidence=True`:
 
 ```python
 from fast_plate_ocr import LicensePlateRecognizer

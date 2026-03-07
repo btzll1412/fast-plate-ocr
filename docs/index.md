@@ -52,8 +52,8 @@ print(m.run("test_plate.png"))
 
 For **more examples** and input formats (NumPy arrays, batches, etc.), see the [**Inference Guide**](inference/running_inference.md).
 
-If your model includes a **region head** and `plate_regions` is defined, predictions can include `region`
-and `region_prob` (when `return_confidence=True`).
+If your model includes a **region head** and `plate_regions` is defined, predictions include `region`.
+The `region_prob` field is populated when `return_confidence=True`.
 
 ### Use it with FastALPR
 

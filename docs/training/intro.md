@@ -54,7 +54,11 @@ To train the model you will need:
       --output-dir trained_models/
     ```
 
-For **region recognition** and export-friendly activations, use the v2 models.
+For **region recognition** and export-friendly activations, use the v2 model configs.
+Region recognition is enabled only when both of the following are true:
+
+1. Your annotations include a `plate_region` column.
+2. Your plate config defines `plate_regions`.
 
 You will probably want to change the augmentation pipeline to apply to your dataset.
 
