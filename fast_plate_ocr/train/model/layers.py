@@ -329,8 +329,8 @@ class TokenReducer(keras.layers.Layer):
         num_heads=2,
         attention_layout: str = "legacy_per_head",
         attention_dropout: float = 0.0,
-        use_query_residual: bool = True,
-        use_output_norm: bool = True,
+        use_query_residual: bool = False,
+        use_output_norm: bool = False,
         norm_type: str = "layer_norm",
         **kwargs,
     ):
