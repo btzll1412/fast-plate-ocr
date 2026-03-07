@@ -10,22 +10,22 @@ tokenizer:
     - { layer: MaxBlurPooling2D, pool_size: 2, filter_size: 3 }
     - { layer: Conv2D, filters: 80, kernel_size: 3, strides: 1, padding: same, activation: silu, use_bias: true }
     - { layer: Conv2D, filters: 96, kernel_size: 3, strides: 1, padding: same, activation: silu, use_bias: true }
-    - { layer: Conv2D, filters: 128, kernel_size: 3, strides: 1, padding: same, activation: silu, use_bias: true }
+    - { layer: Conv2D, filters: 112, kernel_size: 3, strides: 1, padding: same, activation: silu, use_bias: true }
 
   positional_emb: true
   patch_size: 2
   patch_mlp:
     layer: MLP
-    hidden_units: [ 128 ]
+    hidden_units: [ 112 ]
     activation: silu
     dropout_rate: 0.1
 
 transformer_encoder:
-  layers: 6
+  layers: 5
   heads: 2
-  projection_dim: 128
+  projection_dim: 112
   attention_layout: split_projection
-  units: [ 128, 128 ]
+  units: [ 112, 112 ]
   activation: silu
   stochastic_depth: 0.12
   attention_dropout: 0.1
