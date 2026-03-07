@@ -64,23 +64,61 @@ def _build_cct_model(
             name=f"transformer_block_{i}",
         )(x)
 
-    # 8. Reduce to a fixed number of tokens, then project to vocab
+    # 8. Reduce to a fixed number of tokens
     token_features = TokenReducer(
         num_tokens=plate_cfg.max_plate_slots,
         projection_dim=cfg.transformer_encoder.projection_dim,
         num_heads=cfg.transformer_encoder.token_reducer_heads,
+        attention_dropout=cfg.transformer_encoder.attention_dropout,
+        use_query_residual=cfg.transformer_encoder.token_reducer_use_query_residual,
+        use_output_norm=cfg.transformer_encoder.token_reducer_use_output_norm,
+        norm_type=cfg.transformer_encoder.normalization,
     )(x)
 
+    # 9. Add N transformer blocks AFTER TokenReduce (use same settings as other blocks)
+    post_reduce_layers = cfg.transformer_encoder.post_token_reducer_layers
+    x = token_features
+    for i in range(1, post_reduce_layers + 1):
+        x = TransformerBlock(
+            projection_dim=cfg.transformer_encoder.projection_dim,
+            num_heads=cfg.transformer_encoder.heads,
+            mlp_units=cfg.transformer_encoder.units,
+            attention_dropout=cfg.transformer_encoder.attention_dropout,
+            mlp_dropout=cfg.transformer_encoder.mlp_dropout,
+            drop_path_rate=0.0,
+            norm_type=cfg.transformer_encoder.normalization,
+            activation=cfg.transformer_encoder.activation,
+            name=f"post_reduce_transformer_block_{i}",
+        )(x)
+
+    # 10. Project reduced tokens to vocab
     plate_logits = VocabularyProjection(
         vocabulary_size=plate_cfg.vocabulary_size,
         dropout_rate=cfg.transformer_encoder.head_mlp_dropout,
         name="plate",
-    )(token_features)
+    )(x)
 
     if enable_region_head:
         if not plate_cfg.plate_regions:
             raise ValueError("Region head requested, but no regions are defined in the plate config.")
-        pooled_tokens = SequencePooling(name="region_seq_pool")(x)
+
+        # 11. Add N transformer blocks before SeqPool for region branch
+        region_x = x
+        region_pre_seqpool_layers = cfg.transformer_encoder.region_pre_seqpool_layers
+        for i in range(1, region_pre_seqpool_layers + 1):
+            region_x = TransformerBlock(
+                projection_dim=cfg.transformer_encoder.projection_dim,
+                num_heads=cfg.transformer_encoder.heads,
+                mlp_units=cfg.transformer_encoder.units,
+                attention_dropout=cfg.transformer_encoder.attention_dropout,
+                mlp_dropout=cfg.transformer_encoder.mlp_dropout,
+                drop_path_rate=0.0,
+                norm_type=cfg.transformer_encoder.normalization,
+                activation=cfg.transformer_encoder.activation,
+                name=f"region_pre_pool_transformer_block_{i}",
+            )(region_x)
+
+        pooled_tokens = SequencePooling(name="region_seq_pool")(region_x)
         region_logits = layers.Dense(len(plate_cfg.plate_regions), activation="softmax", name="region")(pooled_tokens)
         outputs = {"plate": plate_logits, "region": region_logits}
     else:

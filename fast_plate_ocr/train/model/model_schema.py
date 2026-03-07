@@ -8,7 +8,7 @@ from typing import Annotated, Literal, TypeAlias
 import keras
 import yaml
 from keras.src.layers import RMSNormalization
-from pydantic import BaseModel, Field, PositiveFloat, PositiveInt, model_validator
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 
 from fast_plate_ocr.core.types import PathLike
 from fast_plate_ocr.train.model.layers import (
@@ -350,6 +350,10 @@ class _CCTTransformerEncoderConfig(BaseModel):
     mlp_dropout: UnitFloat = 0.1
     head_mlp_dropout: UnitFloat = 0.2
     token_reducer_heads: PositiveInt = 2
+    token_reducer_use_query_residual: bool = False
+    token_reducer_use_output_norm: bool = False
+    post_token_reducer_layers: NonNegativeInt = 0
+    region_pre_seqpool_layers: NonNegativeInt = 0
     normalization: NormalizationStr = "layer_norm"
 
     @model_validator(mode="after")
