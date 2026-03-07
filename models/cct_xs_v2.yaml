@@ -18,19 +18,23 @@ tokenizer:
   patch_size: 2
   patch_mlp:
     layer: MLP
-    hidden_units: [ 64 ]
+    hidden_units: [ 96 ]
     activation: relu
     dropout_rate: 0.05
 
 transformer_encoder:
-  layers: 4
-  heads: 1
-  projection_dim: 64
-  units: [ 64, 64 ]
+  layers: 3
+  heads: 2
+  projection_dim: 96
+  units: [ 96, 96 ]
   activation: relu
   stochastic_depth: 0.05
   attention_dropout: 0.05
   mlp_dropout: 0.1
   head_mlp_dropout: 0.05
   token_reducer_heads: 4
+  token_reducer_use_query_residual: true
+  token_reducer_use_output_norm: true
+  post_token_reducer_layers: 3
+  region_pre_seqpool_layers: 1
   normalization: dyt
