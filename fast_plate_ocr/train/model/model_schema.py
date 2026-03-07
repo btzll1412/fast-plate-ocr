@@ -363,6 +363,18 @@ class _CCTTransformerEncoderConfig(BaseModel):
             raise ValueError(
                 f"'units[-1]' must equal 'projection_dim' (got {self.units[-1]} vs {self.projection_dim})."
             )
+        if self.attention_layout == "split_projection":
+            if self.projection_dim % self.heads != 0:
+                raise ValueError(
+                    f"'projection_dim' must be divisible by 'heads' when attention_layout='split_projection' "
+                    f"(got {self.projection_dim} vs {self.heads})."
+                )
+            if self.projection_dim % self.token_reducer_heads != 0:
+                raise ValueError(
+                    f"'projection_dim' must be divisible by 'token_reducer_heads' when "
+                    f"attention_layout='split_projection' (got {self.projection_dim} vs "
+                    f"{self.token_reducer_heads})."
+                )
         return self
 
 
