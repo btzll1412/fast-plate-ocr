@@ -259,6 +259,14 @@ def _validate_attention_dims(projection_dim: int, num_heads: int) -> int:
     return projection_dim // num_heads
 
 
+def _resolve_attention_head_dim(projection_dim: int, num_heads: int, attention_layout: str) -> int:
+    if attention_layout == "legacy_per_head":
+        return projection_dim
+    if attention_layout == "split_projection":
+        return _validate_attention_dims(projection_dim, num_heads)
+    raise ValueError(f"Unknown attention_layout {attention_layout!r}")
+
+
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
 class PositionEmbedding(keras.layers.Layer):
     def __init__(
@@ -319,6 +327,7 @@ class TokenReducer(keras.layers.Layer):
         num_tokens,
         projection_dim,
         num_heads=2,
+        attention_layout: str = "legacy_per_head",
         attention_dropout: float = 0.0,
         use_query_residual: bool = True,
         use_output_norm: bool = True,
@@ -329,11 +338,12 @@ class TokenReducer(keras.layers.Layer):
         self.num_tokens = num_tokens
         self.projection_dim = projection_dim
         self.num_heads = num_heads
+        self.attention_layout = attention_layout
         self.attention_dropout = attention_dropout
         self.use_query_residual = use_query_residual
         self.use_output_norm = use_output_norm
         self.norm_type = norm_type
-        self.attn_head_dim = _validate_attention_dims(projection_dim, num_heads)
+        self.attn_head_dim = _resolve_attention_head_dim(projection_dim, num_heads, attention_layout)
         self.attn = keras.layers.MultiHeadAttention(
             num_heads=num_heads,
             key_dim=self.attn_head_dim,
@@ -392,6 +402,7 @@ class TokenReducer(keras.layers.Layer):
                 "num_tokens": self.num_tokens,
                 "projection_dim": self.projection_dim,
                 "num_heads": self.num_heads,
+                "attention_layout": self.attention_layout,
                 "attention_dropout": self.attention_dropout,
                 "use_query_residual": self.use_query_residual,
                 "use_output_norm": self.use_output_norm,
@@ -502,6 +513,7 @@ class TransformerBlock(keras.layers.Layer):
         drop_path_rate: float,
         norm_type: str | None = "layer_norm",
         activation: str = "gelu",
+        attention_layout: str = "legacy_per_head",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -509,9 +521,10 @@ class TransformerBlock(keras.layers.Layer):
         self.activation = activation
         self.projection_dim = projection_dim
         self.num_heads = num_heads
+        self.attention_layout = attention_layout
 
         self.norm1 = build_norm_layer(norm_type)
-        attn_head_dim = _validate_attention_dims(projection_dim, num_heads)
+        attn_head_dim = _resolve_attention_head_dim(projection_dim, num_heads, attention_layout)
         self.attn = keras.layers.MultiHeadAttention(
             num_heads=num_heads, key_dim=attn_head_dim, dropout=attention_dropout
         )
@@ -542,6 +555,7 @@ class TransformerBlock(keras.layers.Layer):
             {
                 "projection_dim": self.projection_dim,
                 "num_heads": self.num_heads,
+                "attention_layout": self.attention_layout,
                 "mlp_units": self.mlp.hidden_units,
                 "mlp_dropout": self.mlp.dropout_rate,
                 "attention_dropout": self.attn.dropout,

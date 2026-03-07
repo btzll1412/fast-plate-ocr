@@ -345,6 +345,7 @@ class _CCTTransformerEncoderConfig(BaseModel):
     projection_dim: PositiveInt
     units: list[PositiveInt]
     activation: ActivationStr = "gelu"
+    attention_layout: Literal["legacy_per_head", "split_projection"] = "legacy_per_head"
     stochastic_depth: UnitFloat = 0.1
     attention_dropout: UnitFloat = 0.1
     mlp_dropout: UnitFloat = 0.1

@@ -26,6 +26,7 @@ transformer_encoder:
   layers: 3
   heads: 2
   projection_dim: 96
+  attention_layout: split_projection
   units: [ 96, 96 ]
   activation: relu
   stochastic_depth: 0.05
