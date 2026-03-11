@@ -132,6 +132,9 @@ def valid(
     if region_metrics_output is not None and not evaluate_by_region:
         raise click.UsageError("`--region-metrics-output` requires `--evaluate-by-region`.")
 
+    if not val_dataset.region_recognition and "region" in model.output_names:
+        model.compile(optimizer=model.optimizer, loss={"plate": model.loss["plate"]}, jit_compile=False)
+
     model.evaluate(val_dataset)
 
     if evaluate_by_region:
