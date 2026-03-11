@@ -18,7 +18,7 @@ tokenizer:
     layer: MLP
     hidden_units: [ 112 ]
     activation: silu
-    dropout_rate: 0.1
+    dropout_rate: 0.2
 
 transformer_encoder:
   layers: 5
@@ -29,8 +29,8 @@ transformer_encoder:
   activation: silu
   stochastic_depth: 0.12
   attention_dropout: 0.1
-  mlp_dropout: 0.1
-  head_mlp_dropout: 0.15
+  mlp_dropout: 0.2
+  head_mlp_dropout: 0.2
   token_reducer_heads: 4
   token_reducer_use_query_residual: true
   token_reducer_use_output_norm: true
