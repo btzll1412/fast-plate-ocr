@@ -494,7 +494,7 @@ def train(  # noqa: PLR0912, PLR0915
 
     cosine_decay = keras.optimizers.schedules.CosineDecay(
         initial_learning_rate=0.0 if warmup_steps > 0 else lr,
-        decay_steps=total_steps,
+        decay_steps=total_steps - warmup_steps,
         alpha=final_lr_factor,
         warmup_steps=warmup_steps,
         warmup_target=lr if warmup_steps > 0 else None,
