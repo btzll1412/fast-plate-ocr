@@ -31,15 +31,15 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                 A.OneOf(
                     [
                         A.CoarseDropout(
-                            num_holes_range=(1, 14),
+                            num_holes_range=(1, 8),
                             hole_height_range=(1, 5),
                             hole_width_range=(1, 5),
                             p=0.2,
                         ),
                         A.PixelDropout(dropout_prob=0.02, p=0.2),
-                        A.GridDropout(ratio=0.3, fill="random", p=0.2),
+                        A.GridDropout(ratio=0.2, fill="random", p=0.2),
                     ],
-                    p=0.7,
+                    p=0.5,
                 ),
             ]
         )
@@ -84,15 +84,15 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                 A.OneOf(
                     [
                         A.CoarseDropout(
-                            num_holes_range=(1, 14),
+                            num_holes_range=(1, 8),
                             hole_height_range=(1, 5),
                             hole_width_range=(1, 5),
                             p=0.2,
                         ),
                         A.PixelDropout(dropout_prob=0.02, p=0.3),
-                        A.GridDropout(ratio=0.3, fill="random", p=0.3),
+                        A.GridDropout(ratio=0.2, fill="random", p=0.3),
                     ],
-                    p=0.5,
+                    p=0.35,
                 ),
             ]
         )
