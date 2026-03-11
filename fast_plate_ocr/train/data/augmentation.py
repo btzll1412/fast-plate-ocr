@@ -19,8 +19,8 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
             [
                 A.Affine(
                     translate_percent=(-0.02, 0.02),
-                    scale=(0.75, 1.10),
-                    rotate=(-15, 15),
+                    scale=(0.85, 1.10),
+                    rotate=(-12, 12),
                     border_mode=cv2.BORDER_CONSTANT,
                     fill=BORDER_COLOR_BLACK,
                     shear=(0.0, 0.0),
@@ -48,8 +48,8 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
             [
                 A.Affine(
                     translate_percent=(-0.02, 0.02),
-                    scale=(0.75, 1.10),
-                    rotate=(-15, 15),
+                    scale=(0.85, 1.10),
+                    rotate=(-12, 12),
                     border_mode=cv2.BORDER_CONSTANT,
                     fill=BORDER_COLOR_BLACK,
                     shear=(0.0, 0.0),
