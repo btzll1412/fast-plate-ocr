@@ -59,7 +59,6 @@ def test_dataset_len_and_shapes(dummy_dataset: pathlib.Path, dummy_plate_config:
 
     batch_x, batch_y = dataset[0]
     assert batch_x.shape == (2, plate_config.img_height, plate_config.img_width, plate_config.num_channels)
-    assert "plate" in batch_y
     assert batch_y["plate"].shape == (2, plate_config.max_plate_slots, plate_config.vocabulary_size)
 
 
