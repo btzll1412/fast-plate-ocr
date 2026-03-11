@@ -30,6 +30,13 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                 A.GaussianBlur(sigma_limit=(0.2, 0.5), p=0.25),
                 A.OneOf(
                     [
+                        A.Morphological(scale=2, operation="dilation", p=0.5),
+                        A.Morphological(scale=2, operation="erosion", p=0.5),
+                    ],
+                    p=0.15,
+                ),
+                A.OneOf(
+                    [
                         A.CoarseDropout(
                             num_holes_range=(1, 8),
                             hole_height_range=(1, 5),
@@ -71,6 +78,13 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                         A.MotionBlur(blur_limit=(3, 3), p=0.5),
                     ],
                     p=0.2,
+                ),
+                A.OneOf(
+                    [
+                        A.Morphological(scale=2, operation="dilation", p=0.5),
+                        A.Morphological(scale=2, operation="erosion", p=0.5),
+                    ],
+                    p=0.15,
                 ),
                 A.OneOf(
                     [
