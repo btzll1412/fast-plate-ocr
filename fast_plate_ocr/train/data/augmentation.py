@@ -19,7 +19,7 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
             [
                 A.Affine(
                     translate_percent=(-0.02, 0.02),
-                    scale=(0.85, 1.10),
+                    scale=(0.8, 1.10),
                     rotate=(-12, 12),
                     border_mode=cv2.BORDER_CONSTANT,
                     fill=BORDER_COLOR_BLACK,
@@ -27,6 +27,11 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                     p=0.75,
                 ),
                 A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=1.0),
+                A.Downscale(
+                    scale_range=(0.75, 0.95),
+                    interpolation_pair={"downscale": cv2.INTER_AREA, "upscale": cv2.INTER_LINEAR},
+                    p=0.15,
+                ),
                 A.GaussianBlur(sigma_limit=(0.2, 0.5), p=0.25),
                 A.OneOf(
                     [
@@ -55,7 +60,7 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
             [
                 A.Affine(
                     translate_percent=(-0.02, 0.02),
-                    scale=(0.85, 1.10),
+                    scale=(0.8, 1.10),
                     rotate=(-12, 12),
                     border_mode=cv2.BORDER_CONSTANT,
                     fill=BORDER_COLOR_BLACK,
@@ -70,8 +75,14 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                     ],
                     p=0.3,
                 ),
+                A.PlanckianJitter(mode="cied", temperature_limit=(5500, 7000), sampling_method="gaussian", p=0.15),
                 A.RandomGamma(gamma_limit=(95, 105), p=0.20),
                 A.ToGray(p=0.05),
+                A.Downscale(
+                    scale_range=(0.75, 0.95),
+                    interpolation_pair={"downscale": cv2.INTER_AREA, "upscale": cv2.INTER_LINEAR},
+                    p=0.15,
+                ),
                 A.OneOf(
                     [
                         A.GaussianBlur(sigma_limit=(0.2, 0.5), p=0.5),
