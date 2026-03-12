@@ -262,14 +262,14 @@ def validate_datasets_before_training(
 )
 @click.option(
     "--plate-loss-weight",
-    default=0.75,
+    default=0.9,
     show_default=True,
     type=float,
     help="Weight for the plate recognition loss.",
 )
 @click.option(
     "--region-loss-weight",
-    default=0.25,
+    default=0.1,
     show_default=True,
     type=float,
     help="Weight for the region recognition loss (when enabled).",
