@@ -26,7 +26,7 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                     shear=(0.0, 0.0),
                     p=0.75,
                 ),
-                A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=1.0),
+                A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.5),
                 A.Downscale(
                     scale_range=(0.75, 0.95),
                     interpolation_pair={"downscale": cv2.INTER_AREA, "upscale": cv2.INTER_LINEAR},
@@ -51,7 +51,7 @@ def default_train_augmentation(img_color_mode: ImageColorMode) -> A.Compose:
                         A.PixelDropout(dropout_prob=0.02, p=0.2),
                         A.GridDropout(ratio=0.2, fill="random", p=0.2),
                     ],
-                    p=0.5,
+                    p=0.35,
                 ),
             ]
         )
