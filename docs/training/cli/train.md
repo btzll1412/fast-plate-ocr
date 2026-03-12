@@ -57,7 +57,7 @@ fast-plate-ocr train \
 ```
 
 Use `--validate-dataset error` to abort on errors, or adjust size thresholds with
-`--validate-min-height` and `--validate-min-width`.
+the standalone `fast-plate-ocr validate-dataset` command.
 
 ## Logging and Checkpoints
 

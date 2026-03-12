@@ -23,6 +23,11 @@ from fast_plate_ocr.train.model.config import load_plate_config_from_yaml
 
 console = Console()
 
+DEFAULT_MIN_HEIGHT = 2
+"""Default minimum image height to consider an image valid."""
+DEFAULT_MIN_WIDTH = 2
+"""Default minimum image width to consider an image valid."""
+
 
 def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
     try:
@@ -211,14 +216,14 @@ def rich_report(errors, warnings):
 )
 @click.option(
     "--min-height",
-    default=2,
+    default=DEFAULT_MIN_HEIGHT,
     show_default=True,
     type=int,
     help="Minimum allowed image height.",
 )
 @click.option(
     "--min-width",
-    default=2,
+    default=DEFAULT_MIN_WIDTH,
     show_default=True,
     type=int,
     help="Minimum allowed image width.",

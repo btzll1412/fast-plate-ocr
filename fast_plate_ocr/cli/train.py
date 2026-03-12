@@ -22,7 +22,13 @@ from keras.src.callbacks import (
 from keras.src.optimizers import AdamW
 
 from fast_plate_ocr.cli.utils import print_params, print_train_details
-from fast_plate_ocr.cli.validate_dataset import console, rich_report, run_dataset_validation
+from fast_plate_ocr.cli.validate_dataset import (
+    DEFAULT_MIN_HEIGHT,
+    DEFAULT_MIN_WIDTH,
+    console,
+    rich_report,
+    run_dataset_validation,
+)
 from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
@@ -100,8 +106,6 @@ def validate_datasets_before_training(
     annotations: pathlib.Path,
     val_annotations: pathlib.Path,
     mode: ValidationMode,
-    min_height: int,
-    min_width: int,
 ) -> None:
     if mode == "off":
         return
@@ -110,7 +114,12 @@ def validate_datasets_before_training(
         df_annots = read_annotations_csv(csv_path)
         csv_root = csv_path.parent
         df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
-        errors, warnings, _ = run_dataset_validation(df_annots, plate_config, min_height, min_width)
+        errors, warnings, _ = run_dataset_validation(
+            df_annots,
+            plate_config,
+            DEFAULT_MIN_HEIGHT,
+            DEFAULT_MIN_WIDTH,
+        )
         console.print(f"\n[bold]Dataset validation ({label})[/]")
         rich_report(errors, warnings)
         return bool(errors)
@@ -153,20 +162,6 @@ def validate_datasets_before_training(
     show_default=True,
     type=click.Choice(["off", "warn", "error"], case_sensitive=False),
     help="Validate train/val CSVs before training. 'warn' prints issues, 'error' aborts on errors.",
-)
-@click.option(
-    "--validate-min-height",
-    default=2,
-    show_default=True,
-    type=int,
-    help="Minimum allowed image height when validating datasets.",
-)
-@click.option(
-    "--validate-min-width",
-    default=2,
-    show_default=True,
-    type=int,
-    help="Minimum allowed image width when validating datasets.",
 )
 @click.option(
     "--validation-freq",
@@ -389,8 +384,6 @@ def train(  # noqa: PLR0912, PLR0915
     annotations: pathlib.Path,
     val_annotations: pathlib.Path,
     validate_dataset: ValidationMode,
-    validate_min_height: int,
-    validate_min_width: int,
     validation_freq: int,
     augmentation_path: pathlib.Path | None,
     lr: float,
@@ -440,8 +433,6 @@ def train(  # noqa: PLR0912, PLR0915
         annotations=annotations,
         val_annotations=val_annotations,
         mode=validate_dataset,
-        min_height=validate_min_height,
-        min_width=validate_min_width,
     )
     train_augmentation = (
         A.load(augmentation_path, data_format="yaml")
