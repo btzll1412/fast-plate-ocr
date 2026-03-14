@@ -24,6 +24,26 @@ plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 print(plate_recognizer.run("test_plate.png"))
 ```
 
+### Use your own exported ONNX model
+
+If you exported your own model, load it with both the ONNX file and the matching plate config:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+plate_recognizer = LicensePlateRecognizer(
+    onnx_model_path="path/to/trained_model/best.onnx",
+    plate_config_path="path/to/trained_model/plate_config.yaml",
+)
+print(plate_recognizer.run("test_plate.png"))
+```
+
+Important:
+
+- Use the `plate_config.yaml` from the same trained model that produced the ONNX file.
+- To use the exported model with `LicensePlateRecognizer`, keep the default ONNX export settings:
+  `channels_last` input layout and `uint8` input dtype.
+
 <details>
   <summary>Demo</summary>
 
