@@ -248,7 +248,7 @@ def postprocess_output(
         - `PlatePrediction.char_probs` is populated only when ``return_confidence=True``.
         - `PlatePrediction.region` is populated only when ``return_region=True``.
         - `PlatePrediction.region_prob` is populated only when both confidence and region outputs
-          are requested (``return_confidence=True`` and ``return_region=True``).
+            are requested (``return_confidence=True`` and ``return_region=True``).
 
     Raises:
         ValueError: If ``return_region=True`` but ``region_output`` or ``region_labels`` are missing.

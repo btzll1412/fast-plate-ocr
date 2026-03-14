@@ -239,7 +239,7 @@ class LicensePlateRecognizer:
         Args:
             n_iter: The number of iterations to run the benchmark. This determines how many times
                 the inference will be executed to compute the average performance metrics.
-            batch_size : Batch size to use for the benchmark.
+            batch_size: Batch size to use for the benchmark.
             include_processing: Indicates whether the benchmark should include preprocessing and
                 postprocessing times in the measurement.
             warmup: Number of warmup iterations to run before the benchmark.
@@ -327,9 +327,9 @@ class LicensePlateRecognizer:
             - `plate` is always present.
             - `char_probs` is present only when ``return_confidence=True``.
             - `region` is populated automatically when the loaded model exports a ``region`` output and
-              the config provides region labels; otherwise it is ``None``.
+                the config provides region labels; otherwise it is ``None``.
             - `region_prob` is populated only when both region prediction is available and
-              ``return_confidence=True``.
+                ``return_confidence=True``.
         """
 
         x = _load_image_from_source(source, self.config)
