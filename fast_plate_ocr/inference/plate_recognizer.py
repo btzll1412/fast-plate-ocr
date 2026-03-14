@@ -136,6 +136,11 @@ class LicensePlateRecognizer:
 
         The current OCR models available from the HUB are:
 
+        - `cct-s-v2-global-model`: OCR model trained with **global** plates data. Based on Compact
+            Convolutional Transformer (CCT) architecture. This is the recommended **S** default.
+        - `cct-xs-v2-global-model`: OCR model trained with **global** plates data. Based on Compact
+            Convolutional Transformer (CCT) architecture. This is the **XS** variant of the v2
+            family.
         - `cct-s-v1-global-model`: OCR model trained with **global** plates data. Based on Compact
             Convolutional Transformer (CCT) architecture. This is the **S** variant.
         - `cct-xs-v1-global-model`: OCR model trained with **global** plates data. Based on Compact

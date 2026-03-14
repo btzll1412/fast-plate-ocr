@@ -20,7 +20,7 @@ can optionally include character-level confidence scores.
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 print(plate_recognizer.run("test_plate.png"))
 ```
 
@@ -39,7 +39,7 @@ print(plate_recognizer.run("test_plate.png"))
 import cv2
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 imgs = [cv2.imread(p) for p in ["plate1.jpg", "plate2.jpg"]]
 res = plate_recognizer.run(imgs)
 ```
@@ -49,7 +49,7 @@ res = plate_recognizer.run(imgs)
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
 print(pred.plate, pred.char_probs)
 ```
@@ -62,7 +62,7 @@ includes a `region` label. The `region_prob` field is also populated when `retur
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
 print(pred.plate, pred.region, pred.region_prob)
 ```
@@ -72,7 +72,7 @@ print(pred.plate, pred.region, pred.region_prob)
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer("cct-xs-v1-global-model")
+m = LicensePlateRecognizer("cct-s-v2-global-model")
 m.benchmark()
 ```
 

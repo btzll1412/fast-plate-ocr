@@ -46,7 +46,7 @@ Run **OCR** on a **cropped** license plate image using [`LicensePlateRecognizer`
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer("cct-xs-v1-global-model")
+m = LicensePlateRecognizer("cct-s-v2-global-model")
 print(m.run("test_plate.png"))
 ```
 

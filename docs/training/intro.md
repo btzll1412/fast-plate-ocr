@@ -45,7 +45,7 @@ To train the model you will need:
     # You can set the backend to either TensorFlow, JAX or PyTorch
     # (just make sure it is installed)
     KERAS_BACKEND=tensorflow fast-plate-ocr train \
-      --model-config-file models/cct_s_v1.yaml \
+      --model-config-file models/cct_s_v2.yaml \
       --plate-config-file config/latin_plates.yaml \
       --annotations data/train.csv \
       --val-annotations data/val.csv \

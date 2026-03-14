@@ -14,7 +14,7 @@ The `train` script launches the end-to-end training process for a license plate 
 ```shell
 # You can set the backend to either TensorFlow, JAX or PyTorch
 KERAS_BACKEND=tensorflow fast-plate-ocr train \
-  --model-config-file models/cct_s_v1.yaml \
+  --model-config-file models/cct_s_v2.yaml \
   --plate-config-file config/latin_plates.yaml \
   --annotations data/train.csv \
   --val-annotations data/val.csv \
