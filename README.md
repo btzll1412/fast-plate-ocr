@@ -101,13 +101,6 @@ pred = m.run('test_plate.png', return_confidence=True)[0]
 print(pred.region, pred.region_prob)
 ```
 
-<details>
-  <summary>Run demo</summary>
-
-![Run demo](https://github.com/ankandrew/fast-plate-ocr/blob/ac3d110c58f62b79072e3a7af15720bb52a45e4e/extra/inference_demo.gif?raw=true)
-
-</details>
-
 To run a model benchmark:
 
 ```python
@@ -117,12 +110,9 @@ m = LicensePlateRecognizer('cct-s-v2-global-model')
 m.benchmark()
 ```
 
-<details>
-  <summary>Benchmark demo</summary>
-
-![Benchmark demo](https://github.com/ankandrew/fast-plate-ocr/blob/ac3d110c58f62b79072e3a7af15720bb52a45e4e/extra/benchmark_demo.gif?raw=true)
-
-</details>
+For more examples and the full API, see the
+[Inference Guide](https://ankandrew.github.io/fast-plate-ocr/latest/inference/running_inference/) and
+[Reference](https://ankandrew.github.io/fast-plate-ocr/latest/reference/).
 
 ## Training
 
