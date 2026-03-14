@@ -13,7 +13,7 @@
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://ankandrew.github.io/fast-plate-ocr/)
 [![image](https://img.shields.io/pypi/l/fast-plate-ocr.svg)](https://pypi.python.org/pypi/fast-plate-ocr)
 
-![Intro](https://raw.githubusercontent.com/ankandrew/fast-plate-ocr/4a7dd34c9803caada0dc50a33b59487b63dd4754/extra/demo.gif)
+![Intro](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/readme_demo.gif)
 
 ---
 

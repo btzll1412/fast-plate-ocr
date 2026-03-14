@@ -1,6 +1,6 @@
 # Fast & Lightweight License Plate OCR
 
-![Intro](https://raw.githubusercontent.com/ankandrew/fast-plate-ocr/4a7dd34c9803caada0dc50a33b59487b63dd4754/extra/demo.gif)
+![Intro](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/readme_demo.gif)
 
 `fast-plate-ocr` is a **lightweight** and **fast** OCR framework for **license plate text recognition**. You can train
 models from scratch or use the trained models for inference.
