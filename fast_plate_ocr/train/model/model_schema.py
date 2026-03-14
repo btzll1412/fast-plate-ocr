@@ -8,7 +8,7 @@ from typing import Annotated, Literal, TypeAlias
 import keras
 import yaml
 from keras.src.layers import RMSNormalization
-from pydantic import BaseModel, Field, PositiveFloat, PositiveInt, model_validator
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 
 from fast_plate_ocr.core.types import PathLike
 from fast_plate_ocr.train.model.layers import (
@@ -197,9 +197,7 @@ class _MaxBlurPooling2D(BaseModel):
     padding: PaddingTypeStr = "same"
 
     def to_keras_layer(self) -> keras.layers.Layer:
-        return MaxBlurPooling2D(
-            pool_size=self.pool_size, filter_size=self.filter_size, padding=self.padding
-        )
+        return MaxBlurPooling2D(pool_size=self.pool_size, filter_size=self.filter_size, padding=self.padding)
 
 
 class _MaxPooling2D(BaseModel):
@@ -347,20 +345,36 @@ class _CCTTransformerEncoderConfig(BaseModel):
     projection_dim: PositiveInt
     units: list[PositiveInt]
     activation: ActivationStr = "gelu"
+    attention_layout: Literal["legacy_per_head", "split_projection"] = "legacy_per_head"
     stochastic_depth: UnitFloat = 0.1
     attention_dropout: UnitFloat = 0.1
     mlp_dropout: UnitFloat = 0.1
     head_mlp_dropout: UnitFloat = 0.2
     token_reducer_heads: PositiveInt = 2
+    token_reducer_use_query_residual: bool = False
+    token_reducer_use_output_norm: bool = False
+    post_token_reducer_layers: NonNegativeInt = 0
+    region_pre_seqpool_layers: NonNegativeInt = 0
     normalization: NormalizationStr = "layer_norm"
 
     @model_validator(mode="after")
     def _consistency_checks(self):
         if self.units[-1] != self.projection_dim:
             raise ValueError(
-                "'units[-1]' must equal 'projection_dim' "
-                f"(got {self.units[-1]} vs {self.projection_dim})."
+                f"'units[-1]' must equal 'projection_dim' (got {self.units[-1]} vs {self.projection_dim})."
             )
+        if self.attention_layout == "split_projection":
+            if self.projection_dim % self.heads != 0:
+                raise ValueError(
+                    f"'projection_dim' must be divisible by 'heads' when attention_layout='split_projection' "
+                    f"(got {self.projection_dim} vs {self.heads})."
+                )
+            if self.projection_dim % self.token_reducer_heads != 0:
+                raise ValueError(
+                    f"'projection_dim' must be divisible by 'token_reducer_heads' when "
+                    f"attention_layout='split_projection' (got {self.projection_dim} vs "
+                    f"{self.token_reducer_heads})."
+                )
         return self
 
 

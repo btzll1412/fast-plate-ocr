@@ -135,9 +135,7 @@ def test_plate_accuracy(y_true: np.ndarray, y_pred: np.ndarray, expected_accurac
         ),
     ],
 )
-def test_top_3_k(
-    y_true: np.ndarray, y_pred: np.ndarray, vocab_size: int, expected_acc: float
-) -> None:
+def test_top_3_k(y_true: np.ndarray, y_pred: np.ndarray, vocab_size: int, expected_acc: float) -> None:
     metric_fn = top_3_k_metric(vocab_size)
     actual = metric_fn(y_true, y_pred)
     assert actual == expected_acc

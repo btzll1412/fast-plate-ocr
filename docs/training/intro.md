@@ -45,7 +45,7 @@ To train the model you will need:
     # You can set the backend to either TensorFlow, JAX or PyTorch
     # (just make sure it is installed)
     KERAS_BACKEND=tensorflow fast-plate-ocr train \
-      --model-config-file models/cct_s_v1.yaml \
+      --model-config-file models/cct_s_v2.yaml \
       --plate-config-file config/latin_plates.yaml \
       --annotations data/train.csv \
       --val-annotations data/val.csv \
@@ -54,9 +54,15 @@ To train the model you will need:
       --output-dir trained_models/
     ```
 
+For **region recognition** and export-friendly activations, use the v2 model configs.
+Region recognition is enabled only when both of the following are true:
+
+1. Your annotations include a `plate_region` column.
+2. Your plate config defines `plate_regions`.
+
 You will probably want to change the augmentation pipeline to apply to your dataset.
 
-In order to do this define an Albumentations pipeline:
+To do this, define an Albumentations pipeline:
 
 ```python
 import albumentations as A
@@ -71,7 +77,7 @@ transform_pipeline = A.Compose(
     ]
 )
 
-# Export to a file (this resultant YAML can be used by the train script)
+# Export to a file (the train script can use this resultant YAML)
 A.save(transform_pipeline, "./transform_pipeline.yaml", data_format="yaml")
 ```
 

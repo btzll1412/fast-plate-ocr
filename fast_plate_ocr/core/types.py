@@ -4,6 +4,7 @@ Common custom types used across the lib.
 
 import os
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -56,3 +57,23 @@ KerasDtypes: TypeAlias = Literal[
 """
 Keras data types supported by the library.
 """
+
+
+@dataclass(frozen=True, slots=True)
+class PlatePrediction:
+    plate: str
+    """Decoded license plate string."""
+    char_probs: np.ndarray | None = None
+    """Optional per-character confidence/probability."""
+    region: str | None = None
+    """Optional predicted region label."""
+    region_prob: float | None = None
+    """Optional probability for the predicted region."""
+
+    @property
+    def has_confidence(self) -> bool:
+        return self.char_probs is not None
+
+    @property
+    def has_region(self) -> bool:
+        return self.region is not None

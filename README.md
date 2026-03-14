@@ -13,7 +13,7 @@
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://ankandrew.github.io/fast-plate-ocr/)
 [![image](https://img.shields.io/pypi/l/fast-plate-ocr.svg)](https://pypi.python.org/pypi/fast-plate-ocr)
 
-![Intro](https://raw.githubusercontent.com/ankandrew/fast-plate-ocr/4a7dd34c9803caada0dc50a33b59487b63dd4754/extra/demo.gif)
+![Intro](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/readme_demo.gif)
 
 ---
 
@@ -27,10 +27,10 @@ The idea is to use this after a plate object detector, since the OCR expects the
 ## Features
 
 - **Keras 3 Backend Support**: Train seamlessly using **[TensorFlow](https://www.tensorflow.org/)**, **[JAX](https://github.com/google/jax)**, or **[PyTorch](https://pytorch.org/)** backends 🧠
-- **Augmentation Variety**: Diverse **training-time augmentations** via **[Albumentations](https://albumentations.ai/)** library 🖼️
 - **Efficient Execution**: **Lightweight** models that are cheap to run 💰
 - **ONNX Runtime Inference**: **Fast** and **optimized** inference with **[ONNX runtime](https://onnxruntime.ai/)** ⚡
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
+- **Region Recognition (Optional)**: Predict **region/country** of the license plate 🌍
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
 - **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
@@ -39,10 +39,12 @@ The idea is to use this after a plate object detector, since the OCR expects the
 
 Optimized, ready to use models with config files for inference or fine-tuning.
 
-| Model Name               | Size | Arch                                                                                                                      | b=1 Avg. Latency (ms) | Plates/sec (PPS) | Model Config                                                                                                                     | Plate Config                                                                                                                     | Val Results                                                                                                           |
-|--------------------------|------|---------------------------------------------------------------------------------------------------------------------------|-----------------------|------------------|----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| `cct-s-v1-global-model`  | S    | [CCT](https://ankandrew.github.io/fast-plate-ocr/1.0/training/config/model_config/#compact-convolutional-transformer-cct) | **0.5877**            | **1701.63**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_model_config.yaml)  | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_plate_config.yaml)  | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_val_results.json)  |
-| `cct-xs-v1-global-model` | XS   | [CCT](https://ankandrew.github.io/fast-plate-ocr/1.0/training/config/model_config/#compact-convolutional-transformer-cct) | **0.3232**            | **3094.21**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_model_config.yaml) | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_plate_config.yaml) | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_val_results.json) |
+| Model Name               | Size | Arch                                                                                                                         | b=1 Avg. Latency (ms) | Plates/sec (PPS) | Model Config                                                                                                                     | Plate Config                                                                                                                     | Val Results                                                                                                           |
+|--------------------------|------|------------------------------------------------------------------------------------------------------------------------------|-----------------------|------------------|----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| `cct-s-v2-global-model`  | S    | [CCT](https://ankandrew.github.io/fast-plate-ocr/latest/training/config/model_config/#compact-convolutional-transformer-cct) | **0.6758**            | **1479.61**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v2_global_model_config.yaml)  | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v2_global_plate_config.yaml)  | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v2_global_val_results.json)  |
+| `cct-xs-v2-global-model` | XS   | [CCT](https://ankandrew.github.io/fast-plate-ocr/latest/training/config/model_config/#compact-convolutional-transformer-cct) | **0.4664**            | **2144.14**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v2_global_model_config.yaml) | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v2_global_plate_config.yaml) | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v2_global_val_results.json) |
+| `cct-s-v1-global-model`  | S    | [CCT](https://ankandrew.github.io/fast-plate-ocr/latest/training/config/model_config/#compact-convolutional-transformer-cct) | **0.5877**            | **1701.63**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_model_config.yaml)  | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_plate_config.yaml)  | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_s_v1_global_val_results.json)  |
+| `cct-xs-v1-global-model` | XS   | [CCT](https://ankandrew.github.io/fast-plate-ocr/latest/training/config/model_config/#compact-convolutional-transformer-cct) | **0.3232**            | **3094.21**      | [model_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_model_config.yaml) | [plate_config.yaml](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_plate_config.yaml) | [results](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/cct_xs_v1_global_val_results.json) |
 
 > [!TIP]
 > 🚀 Try the above models in [Hugging Spaces](https://huggingface.co/spaces/ankandrew/fast-alpr).
@@ -84,32 +86,33 @@ To predict from disk image:
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer('cct-xs-v1-global-model')
+m = LicensePlateRecognizer('cct-s-v2-global-model')
 print(m.run('test_plate.png'))
 ```
 
-<details>
-  <summary>Run demo</summary>
-
-![Run demo](https://github.com/ankandrew/fast-plate-ocr/blob/ac3d110c58f62b79072e3a7af15720bb52a45e4e/extra/inference_demo.gif?raw=true)
-
-</details>
-
-To run model benchmark:
+If your model includes a **region head** (and `plate_regions` is defined in the plate config), predictions
+also include `region`. The `region_prob` field is populated when `return_confidence=True`:
 
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer('cct-xs-v1-global-model')
+m = LicensePlateRecognizer('cct-s-v2-global-model')
+pred = m.run('test_plate.png', return_confidence=True)[0]
+print(pred.region, pred.region_prob)
+```
+
+To run a model benchmark:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+m = LicensePlateRecognizer('cct-s-v2-global-model')
 m.benchmark()
 ```
 
-<details>
-  <summary>Benchmark demo</summary>
-
-![Benchmark demo](https://github.com/ankandrew/fast-plate-ocr/blob/ac3d110c58f62b79072e3a7af15720bb52a45e4e/extra/benchmark_demo.gif?raw=true)
-
-</details>
+For more examples and the full API, see the
+[Inference Guide](https://ankandrew.github.io/fast-plate-ocr/latest/inference/running_inference/) and
+[Reference](https://ankandrew.github.io/fast-plate-ocr/latest/reference/).
 
 ## Training
 
@@ -129,6 +132,8 @@ preparing your dataset to training and exporting the model.
 
 For full details on data preparation, model configs, fine-tuning, and training commands, check out the
 [docs](https://ankandrew.github.io/fast-plate-ocr/1.0/training/intro/).
+
+For **region recognition** and export-friendly activations, use the v2 models.
 
 ## Contributing
 

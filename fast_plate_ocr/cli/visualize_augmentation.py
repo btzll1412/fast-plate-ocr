@@ -15,7 +15,7 @@ import numpy.typing as npt
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
 )
-from fast_plate_ocr.train.model.config import PlateOCRConfig, load_plate_config_from_yaml
+from fast_plate_ocr.train.model.config import PlateConfig, load_plate_config_from_yaml
 from fast_plate_ocr.train.utilities import utils
 
 
@@ -30,7 +30,7 @@ def load_images(
     img_dir: pathlib.Path,
     num_images: int,
     shuffle: bool,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
     augmentation: A.Compose,
 ) -> tuple[list[npt.NDArray[np.uint8]], list[npt.NDArray[np.uint8]]]:
     images = list(
@@ -78,7 +78,6 @@ def display_images(
         plt.show()
 
 
-# ruff: noqa: PLR0913
 # pylint: disable=too-many-arguments,too-many-locals
 
 

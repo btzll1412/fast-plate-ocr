@@ -22,6 +22,15 @@ During training, you will see the following metrics:
 * **plate_len_acc**: Measures how often the predicted **length** of the license plate matches the ground truth.
   For example, if the target plate has 6 characters and the prediction also has 6, it scores 1 (regardless of content).
 
+## Region Metrics (When Enabled)
+
+If your dataset includes a `plate_region` column and the plate config defines `plate_regions`, training enables a region head
+and logs:
+
+* **region_acc**: Categorical accuracy for region classification.
+* **region_top3_acc**: Top-3 categorical accuracy for region classification.
+* **region_macro_f1**: Macro-averaged F1 across all region classes.
+
 ## Example Cases
 
 | Ground Truth | Prediction | plate_acc | char_acc | plate_len_acc | Notes                       |

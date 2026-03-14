@@ -3,6 +3,7 @@ Utility functions for processing model input/output.
 """
 
 import os
+from collections.abc import Sequence
 
 import cv2
 import numpy as np
@@ -12,6 +13,7 @@ from fast_plate_ocr.core.types import (
     ImageInterpolation,
     PaddingColor,
     PathLike,
+    PlatePrediction,
 )
 
 INTERPOLATION_MAP: dict[ImageInterpolation, int] = {
@@ -118,10 +120,7 @@ def resize_image(
         border_color: PaddingColor
         # Ensure padding colour matches channel count
         if image_color_mode == "grayscale":
-            if isinstance(padding_color, tuple):
-                border_color = int(padding_color[0])
-            else:
-                border_color = int(padding_color)
+            border_color = int(padding_color[0]) if isinstance(padding_color, tuple) else int(padding_color)
         elif image_color_mode == "rgb":
             if isinstance(padding_color, tuple):
                 if len(padding_color) != 3:
@@ -213,32 +212,78 @@ def postprocess_output(
     model_output: np.ndarray,
     max_plate_slots: int,
     model_alphabet: str,
+    pad_char: str | None = None,
+    remove_pad_char: bool = True,
     return_confidence: bool = False,
-) -> tuple[list[str], np.ndarray] | list[str]:
+    return_region: bool = False,
+    region_output: np.ndarray | None = None,
+    region_labels: Sequence[str] | None = None,
+) -> list[PlatePrediction]:
     """
-    Decodes model predictions into licence-plate strings.
+    Decode model outputs into per-image predictions.
+
+    This function converts raw model outputs into decoded license plate strings and (optionally)
+    per-character confidence scores and region predictions.
 
     Args:
-        model_output: Raw output tensor from the model.
-        max_plate_slots: Maximum number of character positions.
-        model_alphabet: Alphabet used by the model.
-        return_confidence: If ``True``, also return per-character confidence scores.
-            Defaults to ``False``.
+        model_output: Raw output tensor for the plate head. Expected shape is compatible with
+            ``(N, max_plate_slots * vocab_size)`` or any shape that can be reshaped to
+            ``(N, max_plate_slots, vocab_size)``.
+        max_plate_slots: Maximum number of character positions predicted by the model.
+        model_alphabet: Alphabet used by the model; index positions correspond to model classes.
+        pad_char: Padding character used during training/inference config. When provided and
+            ``remove_pad_char=True``, trailing padding characters are removed from decoded plates.
+        remove_pad_char: If ``True``, remove trailing ``pad_char`` from decoded plates.
+        return_confidence: If ``True``, include per-character confidences in each prediction.
+        return_region: If ``True``, include region predictions in each prediction. Requires
+            ``region_output`` and ``region_labels``.
+        region_output: Optional region probabilities/logits of shape ``(N, num_regions)``. The code
+            assumes this tensor is already softmaxed (probabilities) when computing `region_prob`.
+        region_labels: Sequence mapping region indices to human-readable labels.
 
     Returns:
-        If ``return_confidence`` is ``False``: a list of decoded plate strings.
-            If ``True``: a two-tuple ``(plates, probs)`` where
+        A list of `PlatePrediction`, one entry per input sample.
 
-            * ``plates`` is the list of decoded strings, and
-            * ``probs`` is an array of shape ``(N, max_plate_slots)`` with the corresponding
-              confidence scores.
+        - `PlatePrediction.plate` is always populated.
+        - `PlatePrediction.char_probs` is populated only when ``return_confidence=True``.
+        - `PlatePrediction.region` is populated only when ``return_region=True``.
+        - `PlatePrediction.region_prob` is populated only when both confidence and region outputs
+            are requested (``return_confidence=True`` and ``return_region=True``).
+
+    Raises:
+        ValueError: If ``return_region=True`` but ``region_output`` or ``region_labels`` are missing.
     """
     predictions = model_output.reshape((-1, max_plate_slots, len(model_alphabet)))
     prediction_indices = np.argmax(predictions, axis=-1)
+
     alphabet_array = np.array(list(model_alphabet))
     plate_chars = alphabet_array[prediction_indices]
     plates: list[str] = np.apply_along_axis("".join, 1, plate_chars).tolist()
+    if remove_pad_char and pad_char is not None:
+        plates = [plate.rstrip(pad_char) for plate in plates]
+
+    char_probs: np.ndarray | None = None
     if return_confidence:
-        probs = np.max(predictions, axis=-1)
-        return plates, probs
-    return plates
+        char_probs = np.max(predictions, axis=-1)
+
+    regions: list[str] | None = None
+    region_probs: np.ndarray | None = None
+    if return_region:
+        if region_output is None or region_labels is None:
+            raise ValueError("Region predictions requested but required outputs are missing.")
+        region_indices = np.argmax(region_output, axis=-1)
+        regions = [region_labels[idx] for idx in region_indices]
+        if return_confidence:
+            region_probs = region_output[np.arange(region_output.shape[0]), region_indices]
+
+    results: list[PlatePrediction] = [
+        PlatePrediction(
+            plate=plates[i],
+            char_probs=char_probs[i] if char_probs is not None else None,
+            region=regions[i] if regions is not None else None,
+            region_prob=float(region_probs[i]) if region_probs is not None else None,
+        )
+        for i in range(len(plates))
+    ]
+
+    return results

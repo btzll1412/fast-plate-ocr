@@ -1,6 +1,6 @@
 [project]
 name = "fast-plate-ocr"
-version = "1.0.2"
+version = "1.1.0"
 description = "Fast & Lightweight OCR for vehicle license plates."
 authors = [{ name = "ankandrew", email = "61120139+ankandrew@users.noreply.github.com" }]
 requires-python = ">=3.10"
@@ -31,7 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13"
 ]
 dependencies = [
-    "numpy>=1.20",
+    "numpy",
     "opencv-python-headless",
     "pyyaml>=5.1",
     "rich",
@@ -45,6 +45,7 @@ onnx-openvino = ["onnxruntime-openvino"]
 onnx-directml = ["onnxruntime-directml"]
 onnx-qnn = ["onnxruntime-qnn"]
 train = [
+    "ai-edge-litert",
     "albumentations",
     "click",
     "coremltools",
@@ -97,7 +98,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
@@ -125,13 +126,17 @@ select = [
     "RUF",
     # pandas-vet
     "PD",
+    # flynt
+    "FLY",
+    # flake8-comprehensions
+    "C4",
 ]
 ignore = ["N812", "PLR2004", "PD011"]
 fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.pylint]
-max-args = 8
+max-args = 9
 
 [tool.ruff.format]
 line-ending = "lf"
@@ -155,17 +160,24 @@ signature-mutators = [
 ]
 
 [tool.pylint.format]
-max-line-length = 100
+max-line-length = 120
 
 [tool.pylint."messages control"]
 disable = ["missing-class-docstring", "missing-function-docstring", "wrong-import-order", "duplicate-code"]
 
 [tool.pylint.design]
-max-args = 8
+max-args = 9
 min-public-methods = 1
+max-positional-arguments = 10
+max-locals = 20
+max-statements = 60
+max-attributes = 12
 
 [tool.pylint.basic]
 no-docstring-rgx = "^__|^test_"
+
+[tool.pylint.miscellaneous]
+notes = ["FIXME", "XXX"]
 
 [tool.pytest.ini_options]
 testpaths = [

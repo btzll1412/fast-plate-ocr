@@ -114,9 +114,7 @@ class MaxBlurPooling2D(keras.layers.Layer):
         binomial_filter = _build_binomial_filter(filter_size=self.filter_size)
         binomial_filter = np.repeat(binomial_filter, input_shape[3])
         # Maybe this should be channel first/last agnostic
-        binomial_filter = np.reshape(
-            binomial_filter, (self.filter_size, self.filter_size, input_shape[3], 1)
-        )
+        binomial_filter = np.reshape(binomial_filter, (self.filter_size, self.filter_size, input_shape[3], 1))
         blur_init = keras.initializers.constant(binomial_filter)
 
         self.blur_kernel = self.add_weight(
@@ -135,9 +133,7 @@ class MaxBlurPooling2D(keras.layers.Layer):
             strides=(1, 1),
             padding=self.padding,
         )
-        x = ops.depthwise_conv(
-            x, self.blur_kernel, padding=self.padding, strides=(self.pool_size, self.pool_size)
-        )
+        x = ops.depthwise_conv(x, self.blur_kernel, padding=self.padding, strides=(self.pool_size, self.pool_size))
 
         return x
 
@@ -257,6 +253,20 @@ def build_norm_layer(norm_type) -> keras.layers.Layer:
     raise ValueError(f"Unknown norm_type {norm_type}")
 
 
+def _validate_attention_dims(projection_dim: int, num_heads: int) -> int:
+    if projection_dim % num_heads != 0:
+        raise ValueError(f"`projection_dim` ({projection_dim}) must be divisible by `num_heads` ({num_heads}).")
+    return projection_dim // num_heads
+
+
+def _resolve_attention_head_dim(projection_dim: int, num_heads: int, attention_layout: str) -> int:
+    if attention_layout == "legacy_per_head":
+        return projection_dim
+    if attention_layout == "split_projection":
+        return _validate_attention_dims(projection_dim, num_heads)
+    raise ValueError(f"Unknown attention_layout {attention_layout!r}")
+
+
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
 class PositionEmbedding(keras.layers.Layer):
     def __init__(
@@ -312,12 +322,34 @@ class PositionEmbedding(keras.layers.Layer):
 
 @keras.saving.register_keras_serializable(package="fast_plate_ocr")
 class TokenReducer(keras.layers.Layer):
-    def __init__(self, num_tokens, projection_dim, num_heads=2, **kwargs):
+    def __init__(
+        self,
+        num_tokens,
+        projection_dim,
+        num_heads=2,
+        attention_layout: str = "legacy_per_head",
+        attention_dropout: float = 0.0,
+        use_query_residual: bool = False,
+        use_output_norm: bool = False,
+        norm_type: str = "layer_norm",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.num_tokens = num_tokens
         self.projection_dim = projection_dim
         self.num_heads = num_heads
-        self.attn = keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=projection_dim)
+        self.attention_layout = attention_layout
+        self.attention_dropout = attention_dropout
+        self.use_query_residual = use_query_residual
+        self.use_output_norm = use_output_norm
+        self.norm_type = norm_type
+        self.attn_head_dim = _resolve_attention_head_dim(projection_dim, num_heads, attention_layout)
+        self.attn = keras.layers.MultiHeadAttention(
+            num_heads=num_heads,
+            key_dim=self.attn_head_dim,
+            dropout=attention_dropout,
+        )
+        self.output_norm = build_norm_layer(norm_type) if self.use_output_norm else None
 
     def build(self, input_shape):
         self.query_tokens = self.add_weight(
@@ -334,12 +366,14 @@ class TokenReducer(keras.layers.Layer):
             query_shape=(1, self.num_tokens, self.projection_dim),
             value_shape=(1, seq_length, self.projection_dim),
         )
+        if self.output_norm is not None:
+            self.output_norm.build((1, self.num_tokens, self.projection_dim))
         super().build(input_shape)
 
     def compute_output_shape(self, input_shape):
         return input_shape[0], self.num_tokens, self.projection_dim
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         """
         inputs: Tensor of shape (batch_size, seq_length, projection_dim)
         returns: Tensor of shape (batch_size, num_tokens, projection_dim)
@@ -349,7 +383,16 @@ class TokenReducer(keras.layers.Layer):
         query_tokens = keras.ops.tile(self.query_tokens, [batch_size, 1, 1])
         # Perform cross-attention where the queries are the learned tokens and keys/values are the
         # input tokens.
-        reduced_tokens = self.attn(query=query_tokens, key=inputs, value=inputs)
+        reduced_tokens = self.attn(
+            query=query_tokens,
+            key=inputs,
+            value=inputs,
+            training=training,
+        )
+        if self.use_query_residual:
+            reduced_tokens = reduced_tokens + query_tokens
+        if self.output_norm is not None:
+            reduced_tokens = self.output_norm(reduced_tokens)
         return reduced_tokens
 
     def get_config(self):
@@ -359,6 +402,11 @@ class TokenReducer(keras.layers.Layer):
                 "num_tokens": self.num_tokens,
                 "projection_dim": self.projection_dim,
                 "num_heads": self.num_heads,
+                "attention_layout": self.attention_layout,
+                "attention_dropout": self.attention_dropout,
+                "use_query_residual": self.use_query_residual,
+                "use_output_norm": self.use_output_norm,
+                "norm_type": self.norm_type,
             }
         )
         return cfg
@@ -375,9 +423,7 @@ class StochasticDepth(keras.layers.Layer):
         if training:
             keep_prob = 1 - self.drop_prob
             shape = (keras.ops.shape(x)[0],) + (1,) * (len(x.shape) - 1)
-            random_tensor = keep_prob + keras.random.uniform(
-                shape, 0, 1, seed=self.seed_generator, dtype=x.dtype
-            )
+            random_tensor = keep_prob + keras.random.uniform(shape, 0, 1, seed=self.seed_generator, dtype=x.dtype)
             random_tensor = keras.ops.floor(random_tensor)
             return (x / keep_prob) * random_tensor
         return x
@@ -405,8 +451,7 @@ class MLP(keras.layers.Layer):
         self.use_bias = use_bias
 
         self.dense_layers = [
-            keras.layers.Dense(units, activation=self.activation, use_bias=self.use_bias)
-            for units in self.hidden_units
+            keras.layers.Dense(units, activation=self.activation, use_bias=self.use_bias) for units in self.hidden_units
         ]
         self.dropout_layers = [keras.layers.Dropout(self.dropout_rate) for _ in self.hidden_units]
 
@@ -439,9 +484,7 @@ class VocabularyProjection(keras.layers.Layer):
         super().__init__(**kwargs)
         self.vocabulary_size = vocabulary_size
         self.dropout_rate = dropout_rate
-        self.dropout = (
-            keras.layers.Dropout(self.dropout_rate) if self.dropout_rate is not None else None
-        )
+        self.dropout = keras.layers.Dropout(self.dropout_rate) if self.dropout_rate is not None else None
         self.classifier = keras.layers.Dense(self.vocabulary_size, activation="softmax")
 
     def build(self, input_shape):
@@ -470,15 +513,20 @@ class TransformerBlock(keras.layers.Layer):
         drop_path_rate: float,
         norm_type: str | None = "layer_norm",
         activation: str = "gelu",
+        attention_layout: str = "legacy_per_head",
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.norm_type = norm_type
         self.activation = activation
+        self.projection_dim = projection_dim
+        self.num_heads = num_heads
+        self.attention_layout = attention_layout
 
         self.norm1 = build_norm_layer(norm_type)
+        attn_head_dim = _resolve_attention_head_dim(projection_dim, num_heads, attention_layout)
         self.attn = keras.layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=projection_dim, dropout=attention_dropout
+            num_heads=num_heads, key_dim=attn_head_dim, dropout=attention_dropout
         )
         self.drop1 = StochasticDepth(drop_path_rate)
         self.norm2 = build_norm_layer(norm_type)
@@ -491,7 +539,7 @@ class TransformerBlock(keras.layers.Layer):
     def call(self, x, training=None):
         # 1. MHA + residual
         y = self.norm1(x)
-        y = self.attn(y, y)
+        y = self.attn(y, y, training=training)
         y = self.drop1(y, training=training)
         x = keras.layers.Add()([x, y])
 
@@ -505,8 +553,9 @@ class TransformerBlock(keras.layers.Layer):
         cfg = super().get_config()
         cfg.update(
             {
-                "projection_dim": self.attn.key_dim,
-                "num_heads": self.attn.num_heads,
+                "projection_dim": self.projection_dim,
+                "num_heads": self.num_heads,
+                "attention_layout": self.attention_layout,
                 "mlp_units": self.mlp.hidden_units,
                 "mlp_dropout": self.mlp.dropout_rate,
                 "attention_dropout": self.attn.dropout,
@@ -550,4 +599,30 @@ class PatchExtractor(keras.layers.Layer):
     def get_config(self):
         config = super().get_config()
         config.update({"patch_size": self.patch_size})
+        return config
+
+
+@keras.saving.register_keras_serializable(package="fast_plate_ocr")
+class SequencePooling(keras.layers.Layer):
+    """
+    SeqPool layer, alternative to GAP and to CLS token.
+
+    Modified from https://keras.io/examples/vision/image_classification_with_vision_transformer.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.attention = keras.layers.Dense(1)
+
+    def build(self, input_shape):
+        super().build(input_shape)
+
+    def call(self, x):
+        attention_weights = keras.ops.softmax(self.attention(x), axis=1)
+        attention_weights = keras.ops.transpose(attention_weights, axes=(0, 2, 1))
+        weighted_representation = keras.ops.matmul(attention_weights, x)
+        return keras.ops.squeeze(weighted_representation, -2)
+
+    def get_config(self):
+        config = super().get_config()
         return config

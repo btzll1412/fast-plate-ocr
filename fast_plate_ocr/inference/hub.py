@@ -15,6 +15,8 @@ from fast_plate_ocr.core.utils import safe_write
 
 BASE_URL: str = "https://github.com/ankandrew/cnn-ocr-lp/releases/download"
 OcrModel = Literal[
+    "cct-s-v2-global-model",
+    "cct-xs-v2-global-model",
     "cct-s-v1-global-model",
     "cct-xs-v1-global-model",
     "cct-s-relu-v1-global-model",
@@ -28,6 +30,14 @@ OcrModel = Literal[
 
 
 AVAILABLE_ONNX_MODELS: dict[OcrModel, tuple[str, str]] = {
+    "cct-s-v2-global-model": (
+        f"{BASE_URL}/arg-plates/cct_s_v2_global.onnx",
+        f"{BASE_URL}/arg-plates/cct_s_v2_global_plate_config.yaml",
+    ),
+    "cct-xs-v2-global-model": (
+        f"{BASE_URL}/arg-plates/cct_xs_v2_global.onnx",
+        f"{BASE_URL}/arg-plates/cct_xs_v2_global_plate_config.yaml",
+    ),
     "cct-s-v1-global-model": (
         f"{BASE_URL}/arg-plates/cct_s_v1_global.onnx",
         f"{BASE_URL}/arg-plates/cct_s_v1_global_plate_config.yaml",

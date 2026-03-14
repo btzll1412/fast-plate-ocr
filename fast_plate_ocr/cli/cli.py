@@ -1,5 +1,5 @@
 """
-Main CLI used when training a FastPlateOCR model.
+Main CLI used when training.
 """
 
 try:
@@ -19,7 +19,7 @@ except ImportError as e:
 
 @click.group(context_settings={"max_content_width": 120})
 def main_cli():
-    """FastPlateOCR CLI."""
+    """fast-plate-ocr CLI."""
 
 
 main_cli.add_command(dataset_stats)

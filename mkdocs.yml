@@ -50,15 +50,19 @@ nav:
           - Dataset Stats: training/cli/dataset_stats.md
       - Backend: training/backend.md
   - Reference:
-      - Inference:
-          - LicensePlateRecognizer: reference/inference/inference_class.md
-          - HUB: reference/inference/hub.md
-      - Train:
+      - Overview: reference/index.md
+      - Public API:
+          - Package: reference/public_api.md
+          - Inference:
+              - LicensePlateRecognizer: reference/inference/inference_class.md
+              - PlateConfig: reference/inference/plate_config.md
+              - Model Hub: reference/inference/hub.md
+          - Types: reference/core/types.md
+      - Training:
           - Model Schema: reference/train/model.md
           - Plate Config: reference/train/plate_config.md
-      - Core:
+      - Internals:
           - Process: reference/core/process.md
-          - Types: reference/core/types.md
           - Utils: reference/core/utils.md
   - Contributing:
       - Development: contributing/development.md

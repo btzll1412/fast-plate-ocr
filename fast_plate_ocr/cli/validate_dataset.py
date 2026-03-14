@@ -5,6 +5,7 @@ Validate a `fast-plate-ocr` dataset before training.
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 import click
 import pandas as pd
@@ -15,11 +16,17 @@ from rich.markup import escape
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn
 from rich.table import Table
 
+from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.model.config import load_plate_config_from_yaml
 
 # pylint: disable=too-many-locals
 
 console = Console()
+
+DEFAULT_MIN_HEIGHT = 2
+"""Default minimum image height to consider an image valid."""
+DEFAULT_MIN_WIDTH = 2
+"""Default minimum image width to consider an image valid."""
 
 
 def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
@@ -32,7 +39,32 @@ def partial_decode_ok(path: Path) -> tuple[bool, tuple[int, int] | None]:
         return False, None
 
 
-def _validate_dataset(
+def get_region_validation_state(df: pd.DataFrame, cfg, warnings: list[tuple[str, str]]) -> tuple[bool, set[str]]:
+    has_region_col = "plate_region" in df.columns
+    regions_defined = cfg.has_region_recognition
+    region_recognition = has_region_col and regions_defined
+
+    if has_region_col and not regions_defined:
+        warnings.append(
+            (
+                "-",
+                "plate_region column found in annotations, but plate_config.plate_regions is None or empty. "
+                "plate_region labels will be ignored.",
+            )
+        )
+
+    return region_recognition, set(cfg.plate_regions or [])
+
+
+def validate_region_value(region: Any, allowed_regions: set[str], img_path: Path) -> str | None:
+    if pd.isna(region):
+        return f"Missing region value in row [{img_path}]"
+    if region not in allowed_regions:
+        return f"Invalid region label '{region}' not present in config.plate_regions [{img_path}]"
+    return None
+
+
+def run_dataset_validation(  # noqa: PLR0915
     df: pd.DataFrame,
     cfg,
     min_h: int,
@@ -41,9 +73,12 @@ def _validate_dataset(
     """
     Iterate over the dataframe, collect errors and warnings, and return a cleaned df.
     """
-    errors, warnings, ok_rows = [], [], []
+    errors: list[tuple[str, str]] = []
+    warnings: list[tuple[str, str]] = []
+    ok_rows: list[tuple[Any, ...]] = []
     char_counter: Counter[str] = Counter()
     seen_paths: set[Path] = set()
+    region_recognition, allowed_regions = get_region_validation_state(df, cfg, warnings)
 
     progress = Progress(
         SpinnerColumn(),
@@ -92,8 +127,7 @@ def _validate_dataset(
                 errors.append(
                     (
                         line_no,
-                        f"Plate too long ({len(plate)}>{cfg.max_plate_slots}):"
-                        f" '{plate}' [{img_path}]",
+                        f"Plate too long ({len(plate)}>{cfg.max_plate_slots}): '{plate}' [{img_path}]",
                     )
                 )
                 progress.update(task, advance=1)
@@ -101,11 +135,17 @@ def _validate_dataset(
 
             bad_chars = set(plate) - set(cfg.alphabet)
             if bad_chars:
-                errors.append(
-                    (line_no, f"Invalid chars {bad_chars} in plate '{plate}' [{img_path}]")
-                )
+                errors.append((line_no, f"Invalid chars {bad_chars} in plate '{plate}' [{img_path}]"))
                 progress.update(task, advance=1)
                 continue
+
+            # Check region labels if region recognition is enabled
+            if region_recognition:
+                region_error = validate_region_value(row.plate_region, allowed_regions, img_path)
+                if region_error:
+                    errors.append((line_no, region_error))
+                    progress.update(task, advance=1)
+                    continue
 
             # Check duplicate paths
             if img_path in seen_paths:
@@ -156,7 +196,7 @@ def rich_report(errors, warnings):
     "-a",
     required=True,
     type=click.Path(exists=True, dir_okay=False, file_okay=True, path_type=Path, resolve_path=True),
-    help="CSV with image_path and plate_text columns.",
+    help="CSV with image_path, plate_text, and optional plate_region columns.",
 )
 @click.option(
     "--plate-config-file",
@@ -176,14 +216,14 @@ def rich_report(errors, warnings):
 )
 @click.option(
     "--min-height",
-    default=2,
+    default=DEFAULT_MIN_HEIGHT,
     show_default=True,
     type=int,
     help="Minimum allowed image height.",
 )
 @click.option(
     "--min-width",
-    default=2,
+    default=DEFAULT_MIN_WIDTH,
     show_default=True,
     type=int,
     help="Minimum allowed image width.",
@@ -201,33 +241,26 @@ def validate_dataset(
     """
     cfg = load_plate_config_from_yaml(plate_config_file)
 
-    df_annots = pd.read_csv(annotations_file)
+    df_annots = read_annotations_csv(annotations_file)
     csv_root = annotations_file.parent
     df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
 
-    errors, warnings, cleaned = _validate_dataset(df_annots, cfg, min_height, min_width)
+    errors, warnings, cleaned = run_dataset_validation(df_annots, cfg, min_height, min_width)
 
     # Make cleaned dataset img_path relative (expected format)
-    cleaned["image_path"] = cleaned["image_path"].apply(
-        lambda p: str(Path(p).relative_to(csv_root))
-    )
+    cleaned["image_path"] = cleaned["image_path"].apply(lambda p: str(Path(p).relative_to(csv_root)))
 
     rich_report(errors, warnings)
 
     if export_fixed:
         export_path = csv_root / Path(export_fixed).name
         if export_path.resolve() == annotations_file.resolve():
-            console.print(
-                "[yellow]⚠️ Skipping export: make sure you don't "
-                "overwrite original annotations file.[/]"
-            )
+            console.print("[yellow]⚠️ Skipping export: make sure you don't overwrite original annotations file.[/]")
         elif export_path.exists():
             console.print(f"[yellow]⚠️ Skipping export: file already exists at {export_path}[/]")
         else:
             cleaned.to_csv(export_path, index=False)
-            console.print(
-                f"[green]✅ Wrote cleaned CSV with {len(cleaned)} rows at {export_path} [/]"
-            )
+            console.print(f"[green]✅ Wrote cleaned CSV with {len(cleaned)} rows at {export_path} [/]")
 
     if errors and not warn_only:
         sys.exit(1)
