@@ -4,6 +4,7 @@ Script for exporting the trained Keras models to other formats.
 
 import logging
 import pathlib
+import platform
 import shutil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
@@ -291,6 +292,12 @@ def export_coreml(
 
     if skip_validation:
         logging.info("Skipping CoreML validation.")
+        logging.info("Saved CoreML model to %s", out_file)
+        return
+
+    if platform.system() != "Darwin":
+        logging.info("Skipping CoreML validation outside macOS.")
+        logging.info("Saved CoreML model to %s", out_file)
         return
 
     mlmodel = ct.models.MLModel(str(out_file))
