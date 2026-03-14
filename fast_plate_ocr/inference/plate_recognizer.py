@@ -314,7 +314,10 @@ class LicensePlateRecognizer:
                 - A 4D NumPy array of shape ``(N, H, W, C)`` already batched and ready for inference.
 
                 Inputs are resized/converted as needed according to the loaded `PlateConfig` (color mode,
-                aspect ratio handling, interpolation, and padding).
+                aspect ratio handling, interpolation, and padding). For in-memory NumPy arrays, the library
+                assumes the arrays already use the expected color mode from the config: grayscale arrays for
+                grayscale models, and RGB arrays for RGB models. Arrays are expected in ``channels_last``
+                layout and are cast to ``uint8`` before inference.
 
             return_confidence: If ``True``, include per-character confidence scores in each prediction
                 (`PlatePrediction.char_probs`).

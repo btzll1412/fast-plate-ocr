@@ -13,6 +13,20 @@ range of input types:
 The model automatically handles resizing, padding, and format conversion according to its configuration. Predictions
 can optionally include character-level confidence scores.
 
+### NumPy array requirements
+
+When passing in-memory NumPy arrays instead of image paths, make sure the arrays already match the model input
+convention:
+
+- Use `uint8` inputs. Arrays are cast to `uint8` before inference; floating-point arrays are not normalized.
+- Use `channels_last` layout: `(H, W, C)` for a single image or `(N, H, W, C)` for a batch.
+- For grayscale models, pass grayscale arrays with shape `(H, W)` or `(H, W, 1)`.
+- For RGB models, pass RGB arrays with shape `(H, W, 3)`.
+- If you loaded images with OpenCV (`cv2.imread`), convert BGR to RGB before passing them to an RGB model.
+
+If you pass image paths instead, `fast-plate-ocr` handles disk loading and the required grayscale/RGB conversion
+for you.
+
 
 
 ### Predict a single image
@@ -60,7 +74,10 @@ import cv2
 from fast_plate_ocr import LicensePlateRecognizer
 
 plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
-imgs = [cv2.imread(p) for p in ["plate1.jpg", "plate2.jpg"]]
+imgs = [
+    cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2RGB)
+    for p in ["plate1.jpg", "plate2.jpg"]
+]
 res = plate_recognizer.run(imgs)
 ```
 
