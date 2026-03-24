@@ -19,6 +19,24 @@ fast-plate-ocr export \
   --format onnx
 ```
 
+### Use the exported ONNX with fast-plate-ocr
+
+If you want to use the exported model again with `LicensePlateRecognizer`, keep the default ONNX export settings.
+
+Then load it like this:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+plate_recognizer = LicensePlateRecognizer(
+    onnx_model_path="path/to/trained_model/best.onnx",
+    plate_config_path="path/to/trained_model/plate_config.yaml",
+)
+print(plate_recognizer.run("test_plate.png"))
+```
+
+Use the `plate_config.yaml` from the same trained model that produced the ONNX file.
+
 ### Channels first AND input dtype float32
 
 By default, the ONNX models are exported with channels last and input dtype of `uint8`. There might be cases that
@@ -34,6 +52,10 @@ fast-plate-ocr export \
   --onnx-data-format channels_first \
   --onnx-input-dtype float32
 ```
+
+!!! warning
+    A `channels_first` / `float32` ONNX export is useful for other runtimes, but it is not the right format for
+    `LicensePlateRecognizer`. For `fast-plate-ocr` inference, use the default ONNX export settings.
 
 ??? info "Model shape compatibility"
     Some formats (like TFLite) only support **fixed batch sizes**, whereas ONNX allows **dynamic batching**.

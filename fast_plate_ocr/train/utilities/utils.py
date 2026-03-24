@@ -16,7 +16,7 @@ import numpy.typing as npt
 
 from fast_plate_ocr.core.process import read_and_resize_plate_image
 from fast_plate_ocr.core.types import ImageColorMode, ImageInterpolation, PaddingColor
-from fast_plate_ocr.train.model.config import PlateOCRConfig
+from fast_plate_ocr.train.model.config import PlateConfig
 from fast_plate_ocr.train.model.loss import cce_loss, focal_cce_loss
 from fast_plate_ocr.train.model.metric import (
     cat_acc_metric,
@@ -45,44 +45,48 @@ def target_transform(
 
 def _register_custom_keras():
     base_pkg = "fast_plate_ocr.train.model"
-    for _, name, _ in pkgutil.walk_packages(
-        import_module(base_pkg).__path__, prefix=f"{base_pkg}."
-    ):
+    for _, name, _ in pkgutil.walk_packages(import_module(base_pkg).__path__, prefix=f"{base_pkg}."):
         if any(m in name for m in ("layers",)):
             import_module(name)
 
 
 def load_keras_model(
     model_path: str | pathlib.Path,
-    plate_config: PlateOCRConfig,
+    plate_config: PlateConfig,
 ) -> keras.Model:
     """
     Utility helper function to load the keras OCR model.
     """
     _register_custom_keras()
+    cat_acc = cat_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    plate_acc = plate_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    top3_acc = top_3_k_metric(
+        vocabulary_size=plate_config.vocabulary_size,
+    )
+    len_acc = plate_len_acc_metric(
+        max_plate_slots=plate_config.max_plate_slots,
+        vocabulary_size=plate_config.vocabulary_size,
+        pad_token_index=plate_config.pad_idx,
+    )
+
     custom_objects = {
-        "cce": cce_loss(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "focal_cce": focal_cce_loss(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "cat_acc": cat_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "plate_acc": plate_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "top_3_k": top_3_k_metric(
-            vocabulary_size=plate_config.vocabulary_size,
-        ),
-        "plate_len_acc": plate_len_acc_metric(
-            max_plate_slots=plate_config.max_plate_slots,
-            vocabulary_size=plate_config.vocabulary_size,
-            pad_token_index=plate_config.pad_idx,
-        ),
+        "cce": cce_loss(vocabulary_size=plate_config.vocabulary_size),
+        "focal_cce": focal_cce_loss(vocabulary_size=plate_config.vocabulary_size),
+        "char_acc": cat_acc,
+        "acc": plate_acc,
+        "top3_acc": top3_acc,
+        "len_acc": len_acc,
+        # Metrics old names for backwards compatibility
+        "cat_acc": cat_acc,
+        "plate_acc": plate_acc,
+        "top_3_k": top3_acc,
+        "plate_len_acc": len_acc,
     }
     model = keras.models.load_model(model_path, custom_objects=custom_objects)
     return model
@@ -92,7 +96,7 @@ IMG_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".
 """Valid image extensions for the scope of this script."""
 
 
-def load_images_from_folder(  # noqa: PLR0913
+def load_images_from_folder(
     img_dir: pathlib.Path,
     width: int,
     height: int,
@@ -107,9 +111,7 @@ def load_images_from_folder(  # noqa: PLR0913
     Return all images read from a directory. This uses the same read function used during training.
     """
     # pylint: disable=too-many-arguments
-    image_paths = sorted(
-        str(f.resolve()) for f in img_dir.iterdir() if f.is_file() and f.suffix in IMG_EXTENSIONS
-    )
+    image_paths = sorted(str(f.resolve()) for f in img_dir.iterdir() if f.is_file() and f.suffix in IMG_EXTENSIONS)
     if limit:
         image_paths = image_paths[:limit]
     if shuffle:

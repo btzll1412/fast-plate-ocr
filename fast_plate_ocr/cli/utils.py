@@ -18,9 +18,7 @@ from rich.pretty import Pretty
 from rich.table import Table
 
 
-def print_variables_as_table(
-    c1_title: str, c2_title: str, title: str = "Variables Table", **kwargs: Any
-) -> None:
+def print_variables_as_table(c1_title: str, c2_title: str, title: str = "Variables Table", **kwargs: Any) -> None:
     """
     Prints variables in a formatted table using the rich library.
 

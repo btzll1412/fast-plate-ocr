@@ -21,8 +21,15 @@ from keras.src.callbacks import (
 )
 from keras.src.optimizers import AdamW
 
-import fast_plate_ocr.train.model.model_builders
 from fast_plate_ocr.cli.utils import print_params, print_train_details
+from fast_plate_ocr.cli.validate_dataset import (
+    DEFAULT_MIN_HEIGHT,
+    DEFAULT_MIN_WIDTH,
+    console,
+    rich_report,
+    run_dataset_validation,
+)
+from fast_plate_ocr.train.data.annotations import read_annotations_csv
 from fast_plate_ocr.train.data.augmentation import (
     default_train_augmentation,
 )
@@ -35,20 +42,93 @@ from fast_plate_ocr.train.model.metric import (
     plate_len_acc_metric,
     top_3_k_metric,
 )
+from fast_plate_ocr.train.model.model_builders import build_model
 from fast_plate_ocr.train.model.model_schema import load_model_config_from_yaml
 
 # ruff: noqa: PLR0913
-# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
+# pylint: disable=too-many-branches, too-many-statements
 
 
 EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     "val_plate_acc": "max",
-    "val_cat_acc": "max",
-    "val_top_3_k_acc": "max",
+    "val_plate_char_acc": "max",
+    "val_plate_top3_acc": "max",
     "val_plate_len_acc": "max",
     "val_loss": "min",
+    "val_plate_loss": "min",
+    "val_region_acc": "max",
+    "val_region_top3_acc": "max",
+    "val_region_macro_f1": "max",
+    "val_region_loss": "min",
 }
 """Eval metric to monitor."""
+ValidationMode = Literal["off", "warn", "error"]
+"""Validation mode to use when training."""
+
+
+def resolve_metric_name_for_logs(requested_metric: str, has_region_head: bool) -> str:
+    """
+    Map a logical early-stopping metric name to the actual logs key.
+
+    :param requested_metric: Logical metric name.
+    :param has_region_head: Whether the dataset has a region head.
+    :return: Actual metric key logged.
+    """
+    region_metrics = {
+        "val_region_acc",
+        "val_region_top3_acc",
+        "val_region_macro_f1",
+        "val_region_loss",
+    }
+
+    if not has_region_head and requested_metric in region_metrics:
+        raise ValueError(
+            f"Early-stopping metric '{requested_metric}' requires region recognition, "
+            "but the dataset/model does not have a region head."
+        )
+
+    if not has_region_head:
+        single_head_metric_map = {
+            "val_plate_acc": "val_acc",
+            "val_plate_char_acc": "val_char_acc",
+            "val_plate_top3_acc": "val_top3_acc",
+            "val_plate_len_acc": "val_len_acc",
+            "val_plate_loss": "val_loss",
+        }
+        return single_head_metric_map.get(requested_metric, requested_metric)
+
+    return requested_metric
+
+
+def validate_datasets_before_training(
+    plate_config,
+    annotations: pathlib.Path,
+    val_annotations: pathlib.Path,
+    mode: ValidationMode,
+) -> None:
+    if mode == "off":
+        return
+
+    def validate_one(label: str, csv_path: pathlib.Path) -> bool:
+        df_annots = read_annotations_csv(csv_path)
+        csv_root = csv_path.parent
+        df_annots["image_path"] = df_annots["image_path"].apply(lambda p: str((csv_root / p).resolve()))
+        errors, warnings, _ = run_dataset_validation(
+            df_annots,
+            plate_config,
+            DEFAULT_MIN_HEIGHT,
+            DEFAULT_MIN_WIDTH,
+        )
+        console.print(f"\n[bold]Dataset validation ({label})[/]")
+        rich_report(errors, warnings)
+        return bool(errors)
+
+    train_has_errors = validate_one("train", annotations)
+    val_has_errors = validate_one("val", val_annotations)
+
+    if (train_has_errors or val_has_errors) and mode == "error":
+        raise ValueError("Dataset validation failed. Fix errors or use --validate-dataset=warn to proceed.")
 
 
 @click.command(context_settings={"max_content_width": 120})
@@ -75,6 +155,13 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     required=True,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
     help="Path pointing to the train validation CSV file.",
+)
+@click.option(
+    "--validate-dataset",
+    default="off",
+    show_default=True,
+    type=click.Choice(["off", "warn", "error"], case_sensitive=False),
+    help="Validate train/val CSVs before training. 'warn' prints issues, 'error' aborts on errors.",
 )
 @click.option(
     "--validation-freq",
@@ -112,7 +199,7 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
 )
 @click.option(
     "--weight-decay",
-    default=0.001,
+    default=0.01,
     show_default=True,
     type=float,
     help="Weight decay for the AdamW optimizer.",
@@ -125,25 +212,46 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     help="Gradient clipping norm value for the AdamW optimizer.",
 )
 @click.option(
-    "--loss",
+    "--plate-loss",
     default="cce",
     type=click.Choice(["cce", "focal_cce"], case_sensitive=False),
     show_default=True,
     help="Loss function to use during training.",
 )
 @click.option(
-    "--focal-alpha",
+    "--plate-focal-alpha",
     default=0.25,
     show_default=True,
     type=float,
-    help="Alpha parameter for focal loss. Applicable only when '--loss' is 'focal_cce'.",
+    help="Alpha parameter for plate focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
 )
 @click.option(
-    "--focal-gamma",
+    "--plate-focal-gamma",
     default=2.0,
     show_default=True,
     type=float,
-    help="Gamma parameter for focal loss. Applicable only when '--loss' is 'focal_cce'.",
+    help="Gamma parameter for plate focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
+)
+@click.option(
+    "--region-loss",
+    default="cce",
+    type=click.Choice(["cce", "focal_cce"], case_sensitive=False),
+    show_default=True,
+    help="Loss function for region recognition.",
+)
+@click.option(
+    "--region-focal-alpha",
+    default=0.25,
+    show_default=True,
+    type=float,
+    help="Alpha parameter for region focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
+)
+@click.option(
+    "--region-focal-gamma",
+    default=2.0,
+    show_default=True,
+    type=float,
+    help="Gamma parameter for region focal loss. Applicable only when '--plate-loss' is 'focal_cce'.",
 )
 @click.option(
     "--label-smoothing",
@@ -151,6 +259,20 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     show_default=True,
     type=float,
     help="Amount of label smoothing to apply.",
+)
+@click.option(
+    "--plate-loss-weight",
+    default=0.9,
+    show_default=True,
+    type=float,
+    help="Weight for the plate recognition loss.",
+)
+@click.option(
+    "--region-loss-weight",
+    default=0.1,
+    show_default=True,
+    type=float,
+    help="Weight for the region recognition loss (when enabled).",
 )
 @click.option(
     "--mixed-precision-policy",
@@ -196,7 +318,7 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
 )
 @click.option(
     "--epochs",
-    default=300,
+    default=150,
     show_default=True,
     type=int,
     help="Number of training epochs.",
@@ -256,11 +378,12 @@ EVAL_METRICS: dict[str, Literal["max", "min", "auto"]] = {
     help="Sets all random seeds (Python, NumPy, and backend framework, e.g. TF).",
 )
 @print_params(table_title="CLI Training Parameters", c1_title="Parameter", c2_title="Details")
-def train(
+def train(  # noqa: PLR0912, PLR0915
     model_config_file: pathlib.Path,
     plate_config_file: pathlib.Path,
     annotations: pathlib.Path,
     val_annotations: pathlib.Path,
+    validate_dataset: ValidationMode,
     validation_freq: int,
     augmentation_path: pathlib.Path | None,
     lr: float,
@@ -268,10 +391,15 @@ def train(
     warmup_fraction: float,
     weight_decay: float,
     clipnorm: float,
-    loss: str,
-    focal_alpha: float,
-    focal_gamma: float,
+    plate_loss: str,
+    plate_focal_alpha: float,
+    plate_focal_gamma: float,
+    region_loss: str,
+    region_focal_alpha: float,
+    region_focal_gamma: float,
     label_smoothing: float,
+    plate_loss_weight: float,
+    region_loss_weight: float,
     mixed_precision_policy: str | None,
     batch_size: int,
     workers: int,
@@ -299,6 +427,13 @@ def train(
 
     plate_config = load_plate_config_from_yaml(plate_config_file)
     model_config = load_model_config_from_yaml(model_config_file)
+
+    validate_datasets_before_training(
+        plate_config=plate_config,
+        annotations=annotations,
+        val_annotations=val_annotations,
+        mode=validate_dataset,
+    )
     train_augmentation = (
         A.load(augmentation_path, data_format="yaml")
         if augmentation_path
@@ -327,8 +462,20 @@ def train(
         max_queue_size=max_queue_size,
     )
 
+    if val_dataset.region_recognition != train_dataset.region_recognition:
+        raise ValueError(
+            "Mismatch between training and validation datasets: region labels available in only one of them."
+        )
+
+    has_region_head = train_dataset.region_recognition
+
+    # Map the logical metric name to the actual logs key Keras will emit.
+    monitor_metric_name = resolve_metric_name_for_logs(early_stopping_metric, has_region_head=has_region_head)
+
+    monitor_mode = EVAL_METRICS[early_stopping_metric]
+
     # Train
-    model = fast_plate_ocr.train.model.model_builders.build_model(model_config, plate_config)
+    model = build_model(model_config, plate_config, enable_region_head=has_region_head)
 
     if weights_path:
         model.load_weights(weights_path, skip_mismatch=True)
@@ -338,56 +485,72 @@ def train(
 
     cosine_decay = keras.optimizers.schedules.CosineDecay(
         initial_learning_rate=0.0 if warmup_steps > 0 else lr,
-        decay_steps=total_steps,
+        decay_steps=total_steps - warmup_steps,
         alpha=final_lr_factor,
         warmup_steps=warmup_steps,
         warmup_target=lr if warmup_steps > 0 else None,
     )
 
     optimizer = AdamW(cosine_decay, weight_decay=weight_decay, clipnorm=clipnorm, use_ema=use_ema)
-    optimizer.exclude_from_weight_decay(
-        var_names=[name.strip() for name in wd_ignore.split(",") if name.strip()]
-    )
+    optimizer.exclude_from_weight_decay(var_names=[name.strip() for name in wd_ignore.split(",") if name.strip()])
 
-    if loss == "cce":
-        loss_fn = cce_loss(
-            vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing
-        )
-    elif loss == "focal_cce":
-        loss_fn = focal_cce_loss(
+    if plate_loss == "cce":
+        plate_loss_fn = cce_loss(vocabulary_size=plate_config.vocabulary_size, label_smoothing=label_smoothing)
+    elif plate_loss == "focal_cce":
+        plate_loss_fn = focal_cce_loss(
             vocabulary_size=plate_config.vocabulary_size,
-            alpha=focal_alpha,
-            gamma=focal_gamma,
+            alpha=plate_focal_alpha,
+            gamma=plate_focal_gamma,
             label_smoothing=label_smoothing,
         )
     else:
-        raise ValueError(f"Unsupported loss type: {loss}")
+        raise ValueError(f"Unsupported plate loss type: {plate_loss}")
+
+    if region_loss == "cce":
+        region_loss_fn = keras.losses.CategoricalCrossentropy()
+    elif region_loss == "focal_cce":
+        region_loss_fn = keras.losses.CategoricalFocalCrossentropy(alpha=region_focal_alpha, gamma=region_focal_gamma)
+    else:
+        raise ValueError(f"Unsupported region loss type: {region_loss}")
+
+    base_metrics = [
+        cat_acc_metric(max_plate_slots=plate_config.max_plate_slots, vocabulary_size=plate_config.vocabulary_size),
+        plate_acc_metric(max_plate_slots=plate_config.max_plate_slots, vocabulary_size=plate_config.vocabulary_size),
+        top_3_k_metric(vocabulary_size=plate_config.vocabulary_size),
+        plate_len_acc_metric(
+            max_plate_slots=plate_config.max_plate_slots,
+            vocabulary_size=plate_config.vocabulary_size,
+            pad_token_index=plate_config.pad_idx,
+        ),
+    ]
+
+    if train_dataset.region_recognition:
+        loss_config = {"plate": plate_loss_fn, "region": region_loss_fn}
+        loss_weights = {"plate": plate_loss_weight, "region": region_loss_weight}
+        metrics_config = {
+            "plate": base_metrics,
+            "region": [
+                keras.metrics.CategoricalAccuracy(name="acc"),
+                keras.metrics.TopKCategoricalAccuracy(k=3, name="top3_acc"),
+                keras.metrics.F1Score(average="macro", name="macro_f1"),
+            ],
+        }
+    else:
+        loss_config = {"plate": plate_loss_fn}
+        loss_weights = None
+        metrics_config = {"plate": base_metrics}
 
     model.compile(
-        loss=loss_fn,
+        loss=loss_config,
+        loss_weights=loss_weights,
         jit_compile=False,
         optimizer=optimizer,
-        metrics=[
-            cat_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-            ),
-            plate_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-            ),
-            top_3_k_metric(vocabulary_size=plate_config.vocabulary_size),
-            plate_len_acc_metric(
-                max_plate_slots=plate_config.max_plate_slots,
-                vocabulary_size=plate_config.vocabulary_size,
-                pad_token_index=plate_config.pad_idx,
-            ),
-        ],
+        metrics=metrics_config,
     )
 
     output_dir /= datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_dir.mkdir(parents=True, exist_ok=True)
-    model_file_path = output_dir / "ckpt-epoch_{epoch:02d}-acc_{val_plate_acc:.3f}.keras"
+    model_file_path = output_dir / "best.keras"
 
     # Save params and configs used for training
     shutil.copy(model_config_file, output_dir / "model_config.yaml")
@@ -404,9 +567,9 @@ def train(
     callbacks = [
         # Stop training when early_stopping_metric doesn't improve for X epochs
         EarlyStopping(
-            monitor=early_stopping_metric,
+            monitor=monitor_metric_name,
             patience=early_stopping_patience,
-            mode=EVAL_METRICS[early_stopping_metric],
+            mode=monitor_mode,
             restore_best_weights=False,
             verbose=1,
         ),
@@ -417,8 +580,8 @@ def train(
         ModelCheckpoint(output_dir / "last.keras", save_weights_only=False, save_best_only=False),
         ModelCheckpoint(
             model_file_path,
-            monitor=early_stopping_metric,
-            mode=EVAL_METRICS[early_stopping_metric],
+            monitor=monitor_metric_name,
+            mode=monitor_mode,
             save_weights_only=False,
             save_best_only=True,
             verbose=1,

@@ -1,6 +1,6 @@
 # Fast & Lightweight License Plate OCR
 
-![Intro](https://raw.githubusercontent.com/ankandrew/fast-plate-ocr/4a7dd34c9803caada0dc50a33b59487b63dd4754/extra/demo.gif)
+![Intro](https://github.com/ankandrew/fast-plate-ocr/releases/download/arg-plates/readme_demo.gif)
 
 `fast-plate-ocr` is a **lightweight** and **fast** OCR framework for **license plate text recognition**. You can train
 models from scratch or use the trained models for inference.
@@ -15,10 +15,10 @@ The idea is to use this after a plate object detector, since the OCR expects the
 ### Features
 
 - **Keras 3 Backend Support**: Train seamlessly using **[TensorFlow](https://www.tensorflow.org/)**, **[JAX](https://github.com/google/jax)**, or **[PyTorch](https://pytorch.org/)** backends 🧠
-- **Augmentation Variety**: Diverse **training-time augmentations** via **[Albumentations](https://albumentations.ai/)** library 🖼️
 - **Efficient Execution**: **Lightweight** models that are cheap to run 💰
 - **ONNX Runtime Inference**: **Fast** and **optimized** inference with **[ONNX runtime](https://onnxruntime.ai/)** ⚡
 - **User-Friendly CLI**: Simplified **CLI** for **training** and **validating** OCR models 🛠️
+- **Region Recognition (Optional)**: Predict **region/country** of the license plate 🌍
 - **Model HUB**: Access to a collection of **pre-trained models** ready for inference 🌟
 - **Train**/**Fine-tune**: Easily train or **fine-tune** your own models 🔧
 - **Export-Friendly**: Export easily to **CoreML**, **TFLite**, or **ONNX** formats 📦
@@ -46,11 +46,14 @@ Run **OCR** on a **cropped** license plate image using [`LicensePlateRecognizer`
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer("cct-xs-v1-global-model")
+m = LicensePlateRecognizer("cct-s-v2-global-model")
 print(m.run("test_plate.png"))
 ```
 
 For **more examples** and input formats (NumPy arrays, batches, etc.), see the [**Inference Guide**](inference/running_inference.md).
+
+If your model includes a **region head** and `plate_regions` is defined, predictions include `region`.
+The `region_prob` field is populated when `return_confidence=True`.
 
 ### Use it with FastALPR
 

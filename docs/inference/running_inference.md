@@ -13,6 +13,20 @@ range of input types:
 The model automatically handles resizing, padding, and format conversion according to its configuration. Predictions
 can optionally include character-level confidence scores.
 
+### NumPy array requirements
+
+When passing in-memory NumPy arrays instead of image paths, make sure the arrays already match the model input
+convention:
+
+- Use `uint8` inputs. Arrays are cast to `uint8` before inference; floating-point arrays are not normalized.
+- Use `channels_last` layout: `(H, W, C)` for a single image or `(N, H, W, C)` for a batch.
+- For grayscale models, pass grayscale arrays with shape `(H, W)` or `(H, W, 1)`.
+- For RGB models, pass RGB arrays with shape `(H, W, 3)`.
+- If you loaded images with OpenCV (`cv2.imread`), convert BGR to RGB before passing them to an RGB model.
+
+If you pass image paths instead, `fast-plate-ocr` handles disk loading and the required grayscale/RGB conversion
+for you.
+
 
 
 ### Predict a single image
@@ -20,9 +34,29 @@ can optionally include character-level confidence scores.
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
 print(plate_recognizer.run("test_plate.png"))
 ```
+
+### Use your own exported ONNX model
+
+If you exported your own model, load it with both the ONNX file and the matching plate config:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+plate_recognizer = LicensePlateRecognizer(
+    onnx_model_path="path/to/trained_model/best.onnx",
+    plate_config_path="path/to/trained_model/plate_config.yaml",
+)
+print(plate_recognizer.run("test_plate.png"))
+```
+
+Important:
+
+- Use the `plate_config.yaml` from the same trained model that produced the ONNX file.
+- To use the exported model with `LicensePlateRecognizer`, keep the default ONNX export settings:
+  `channels_last` input layout and `uint8` input dtype.
 
 <details>
   <summary>Demo</summary>
@@ -39,8 +73,11 @@ print(plate_recognizer.run("test_plate.png"))
 import cv2
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
-imgs = [cv2.imread(p) for p in ["plate1.jpg", "plate2.jpg"]]
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
+imgs = [
+    cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2RGB)
+    for p in ["plate1.jpg", "plate2.jpg"]
+]
 res = plate_recognizer.run(imgs)
 ```
 
@@ -49,8 +86,22 @@ res = plate_recognizer.run(imgs)
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-plate_recognizer = LicensePlateRecognizer("cct-xs-v1-global-model")
-plates, conf = plate_recognizer.run("test_plate.png", return_confidence=True)
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
+pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
+print(pred.plate, pred.char_probs)
+```
+
+### Region prediction (optional)
+
+If the loaded model exports a **region** head and the plate config includes `plate_regions`, each prediction
+includes a `region` label. The `region_prob` field is also populated when `return_confidence=True`:
+
+```python
+from fast_plate_ocr import LicensePlateRecognizer
+
+plate_recognizer = LicensePlateRecognizer("cct-s-v2-global-model")
+pred = plate_recognizer.run("test_plate.png", return_confidence=True)[0]
+print(pred.plate, pred.region, pred.region_prob)
 ```
 
 ### Benchmark the model
@@ -58,7 +109,7 @@ plates, conf = plate_recognizer.run("test_plate.png", return_confidence=True)
 ```python
 from fast_plate_ocr import LicensePlateRecognizer
 
-m = LicensePlateRecognizer("cct-xs-v1-global-model")
+m = LicensePlateRecognizer("cct-s-v2-global-model")
 m.benchmark()
 ```
 
